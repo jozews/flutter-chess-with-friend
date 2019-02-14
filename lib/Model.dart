@@ -16,14 +16,14 @@ enum ColorPiece {
 
 class Piece {
 
-  Square squareAtStart;
+  Square squareFirst;
   TypePiece type;
   ColorPiece color;
 
-  Piece(this.type, this.color, this.squareAtStart);
+  Piece(this.type, this.color, this.squareFirst);
 
-  bool operator ==(o) => o is Piece && o.squareAtStart == squareAtStart;
-  int get hashCode => squareAtStart.hashCode;
+  bool operator ==(o) => o is Piece && o.squareFirst == squareFirst;
+  int get hashCode => squareFirst.hashCode;
 }
 
 
@@ -66,8 +66,52 @@ class Game {
   ColorPiece colorToMove;
   List<Move> moves;
 
+  Game.standard() {
+    pieces = piecesStandard();
+    state = StateGame.ongoing;
+    colorToMove = ColorPiece.white;
+    moves = [];
+  }
 
-  List<Square> getSquaresFinalValid(Square squareInitial) {
+  Map<Square, Piece> piecesStandard() {
+      
+    var pieces = Map<Square, Piece>();
+    var columns = List<int>.generate(8, (i) => 1 + i);
+
+    // white pieces
+    // ...
+    for (int column in columns) {
+      var rows = List<int>.generate(2, (i) => 1 + i) + List<int>.generate(2, (i) => 6 + i);
+      for (int row in rows) {
+        var square = Square(column, row);
+        var color = row == 1 || row == 2 ? ColorPiece.white : ColorPiece.black;
+        if (row == 1 || row == 8) {
+          if (column == 1 || column == 8) {
+            pieces[square] = Piece(TypePiece.rook, color, square);
+          }
+          else if (column == 2 || column == 7) {
+            pieces[square] = Piece(TypePiece.knight, color, square);
+          }
+          else if (column == 3 || column == 6) {
+            pieces[square] = Piece(TypePiece.bishop, color, square);
+          }
+          else if (column == 4) {
+            pieces[square] = Piece(TypePiece.queen, color, square);
+          }
+          else {
+            pieces[square] = Piece(TypePiece.king, color, square);
+          }
+        }
+        else {
+          pieces[square] = Piece(TypePiece.pawn, color, square);
+        }
+      }
+    }
+
+    return pieces;
+  }
+
+  List<Square> getSquaresFinalForMovesValid(Square squareInitial) {
 
     var pieceAtSquareInitial = pieces[squareInitial];
 
@@ -95,93 +139,6 @@ class Game {
     // ...
     // ...
     List<Square> squaresFinalValid = pathsOfPiece(pieceAtSquareInitial, isChecking: false).expand((i) => i).toList();
-
-    switch (pieceAtSquareInitial.type) {
-
-      case TypePiece.king:
-        var deltas = [[1, 1], [1, 0], [1, -1], [0, 1], [0, -1], [-1, 1], [-1, 0], [-1, -1]];
-        var squaresWithDelta = deltas.map<Square>((delta) => Square(squareInitial.column + delta[0], squareInitial.row + delta[1]));
-        squaresFinalValid = squaresWithDelta.where((square) => square.inBounds);
-        break;
-
-      case TypePiece.queen:
-        var deltas = [[1, 1], [1, 0], [1, -1], [0, 1], [0, -1], [-1, 1], [-1, 0], [-1, -1]];
-        for (List<int> delta in deltas) {
-          var squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-          while (squareWithDelta.inBounds) {
-            var pieceAtSquare = pieces[squareWithDelta];
-            if (pieceAtSquare != null && pieceAtSquare.color == colorToMove) {
-              break;
-            }
-            squaresFinalValid.add(squareWithDelta);
-            squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-            if (pieceAtSquare != null && pieceAtSquare.color != colorToMove) {
-              break;
-            }
-          }
-        }
-        break;
-
-      case TypePiece.bishop:
-        var deltas = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-        for (List<int> delta in deltas) {
-          var squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-          while (squareWithDelta.inBounds) {
-            var pieceAtSquare = pieces[squareWithDelta];
-            if (pieceAtSquare != null && pieceAtSquare.color == colorToMove) {
-              break;
-            }
-            squaresFinalValid.add(squareWithDelta);
-            squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-            if (pieceAtSquare != null && pieceAtSquare.color != colorToMove) {
-              break;
-            }
-          }
-        }
-        break;
-
-      case TypePiece.knight:
-        var deltas = [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]];
-        var squaresWithDelta = deltas.map<Square>((delta) => Square(squareInitial.column + delta[0], squareInitial.row + delta[1]));
-        squaresFinalValid = squaresWithDelta.where((square) => square.inBounds);
-        break;
-
-      case TypePiece.rook:
-        var deltas = [[1, 0], [0, 1], [0, -1], [-1, 0]];
-        for (List<int> delta in deltas) {
-          var squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-          while (squareWithDelta.inBounds) {
-            var pieceAtSquare = pieces[squareWithDelta];
-            if (pieceAtSquare != null && pieceAtSquare.color == colorToMove) {
-              break;
-            }
-            squaresFinalValid.add(squareWithDelta);
-            squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-            if (pieceAtSquare != null && pieceAtSquare.color != colorToMove) {
-              break;
-            }
-          }
-        }
-        break;
-
-      case TypePiece.pawn:
-        var direction = pieceAtSquareInitial.color == ColorPiece.white ? 1 : -1;
-        var deltas = [[-1, direction], [0, direction], [1, direction]];
-        for (List<int> delta in deltas) {
-          var squareWithDelta = Square(squareInitial.column + delta[0], squareInitial.row + delta[1]);
-          var pieceAtSquareWithDelta = pieces[squareWithDelta];
-          if (delta[1] == 0 && pieceAtSquareWithDelta == null) {
-            squaresFinalValid.add(squareWithDelta);
-          }
-          else if (delta[1] != 0 && pieceAtSquareWithDelta != null && pieceAtSquareWithDelta.color != pieceAtSquareInitial.color) {
-            squaresFinalValid.add(squareWithDelta);
-          }
-        }
-        // TODO: DOUBLE MOVE
-        // TODO: EN PASSANT
-        break;
-    }
-
 
     // filter out where square final is not empty or takes piece
     // ...
@@ -228,15 +185,21 @@ class Game {
   }
 
 
-  // NOTE: COULD BE OPTIMIZED
+  // * CAN BE OPTIMIZED
   bool isMoveValid(Move move) {
-    var squaresFinalValid = getSquaresFinalValid(move.squareInitial);
+    var squaresFinalValid = getSquaresFinalForMovesValid(move.squareInitial);
     var isMoveFinalInSquaresFinalValid = squaresFinalValid.where((squareFinal) => squareFinal == move.squareFinal).isNotEmpty;
     return isMoveFinalInSquaresFinalValid;
   }
 
+  bool makeMovePNG(String png) {
+    Square squareInitial;
+    Square squareFinal;
+    var move = Move(squareInitial, squareFinal);
+    return makeMove(move);
+  }
 
-  bool makeMove(Move move) {
+  bool makeMove(Move move, {TypePiece typePiecePromotion}) {
 
     // validate move
     // ...
@@ -244,9 +207,36 @@ class Game {
       return false;
     }
 
+    var isPromotion = isMovePromotion(move);
+    if (isPromotion && typePiecePromotion == null) {
+      return false;
+    }
+
     // make move
     // ...
+    var isCastling = isMoveCastling(move);
+    var isEnPassant = isMoveEnPassant(move);
+    // * Update board after checking isMoveCastling and isMoveEnPassant because need to review state of the board before move 
     var pieceMoved = pieces.remove(move.squareInitial);
+    if (isPromotion) {
+      pieceMoved.type = typePiecePromotion;
+    }
+    else {
+      // if castling move rook
+      if (isCastling) {
+        var columnInitialRook = move.squareFinal.column - move.squareInitial.column > 0 ? 8 : 1;
+        var squareInitialRook = Square(columnInitialRook, move.squareInitial.row);
+        var columnFinalRook = (move.squareInitial.column + move.squareFinal.column) ~/ 2;
+        var squareFinalRook = Square(columnFinalRook, move.squareInitial.row);
+        var pieceRook = pieces.remove(squareInitialRook);
+        pieces[squareFinalRook] = pieceRook;
+      }
+      // if en passant remove taken pawn
+      else if (isEnPassant) {
+        var squareOfCapture = Square(move.squareFinal.column, move.squareInitial.row);
+        pieces.remove(squareOfCapture);
+      }
+    }
     pieces[move.squareFinal] = pieceMoved;
     moves.add(move);
 
@@ -259,7 +249,7 @@ class Game {
     var colorToMoveOpposite = colorToMove == ColorPiece.black ? ColorPiece.white : ColorPiece.black;
     var entryKing = getEntriesPiecesFiltered(TypePiece.king, colorToMove).first;
     var squareKing = entryKing.key;
-    var squaresKingFinalValid = getSquaresFinalValid(squareKing);
+    var squaresKingFinalValid = getSquaresFinalForMovesValid(squareKing);
     var entryPiecesColorToMoveOpposite = getEntriesPiecesFiltered(null, colorToMoveOpposite);
     var pathsCheckingKing = entryPiecesColorToMoveOpposite.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
 
@@ -270,7 +260,7 @@ class Game {
         var canCheckmateBeCovered = false;
         var piecesColorToMove = getEntriesPiecesFiltered(null, colorToMove).where((entry) => entry.value.type != TypePiece.king);
         for (MapEntry<Square, Piece> pieceColorToMove in piecesColorToMove) {
-          var squaresPieceFinalValid = getSquaresFinalValid(pieceColorToMove.key);
+          var squaresPieceFinalValid = getSquaresFinalForMovesValid(pieceColorToMove.key);
           var pieceWithValidMoveInCheckingPath = squaresPieceFinalValid.where((squareFinal) => pathsCheckingKing.first.contains(squareFinal));
           if (pieceWithValidMoveInCheckingPath.isNotEmpty) {
             canCheckmateBeCovered = true;
@@ -292,7 +282,7 @@ class Game {
       var piecesColorToMove = getEntriesPiecesFiltered(null, colorToMove);
       var isStalemate = true;
       for (MapEntry<Square, Piece> piece in piecesColorToMove) {
-        if (getSquaresFinalValid(piece.key).isNotEmpty) {
+        if (getSquaresFinalForMovesValid(piece.key).isNotEmpty) {
           isStalemate = false;
           break;
         }
@@ -302,6 +292,62 @@ class Game {
       }
     }
 
+    return true;
+  }
+
+  
+  // * DOES NOT VALIDATES MOVE
+  bool isMovePromotion(Move move) {
+    var piece = pieces[move.squareInitial];
+    if (piece == null || piece.type != TypePiece.pawn) {
+      return false;
+    }
+    var promotionRow = piece.color == ColorPiece.white ? 8 : 1;
+    var isSquareFinalPromotionRow = move.squareFinal.row == promotionRow;
+    return isSquareFinalPromotionRow;
+  }
+
+
+  // * DOES NOT VALIDATES
+  bool isMoveCastling(Move move) {
+    var piece = pieces[move.squareInitial];
+    if (piece == null || piece.type != TypePiece.king) {
+      return false;
+    }
+    var isColumnDeltaAbsoluteMoreThan1 = (move.squareInitial.column - move.squareFinal.column).abs() > 1;
+    return isColumnDeltaAbsoluteMoreThan1;
+  }
+
+
+  bool isMoveEnPassant(Move move) {
+    if (moves.isEmpty) {
+      return false;
+    }
+    var moveLast = moves[moves.length -1];
+    var pieceMoveLast = pieces[moveLast.squareFinal];
+    if (pieceMoveLast == null) {
+      return false;
+    }
+    var isPieceMoveLastPawn = pieceMoveLast.type == TypePiece.pawn;
+    if (!isPieceMoveLastPawn) {
+      return false;
+    }
+    var isMoveLastDoublePawn = (moveLast.squareInitial.row - moveLast.squareFinal.row).abs() == 2;
+    if (!isMoveLastDoublePawn) {
+      return false;
+    }    
+    var arePiecesInSameRow = moveLast.squareFinal.row == move.squareInitial.row;
+    if (!arePiecesInSameRow) {
+      return false;
+    }
+    var arePiecesInAdjacentColumns = (moveLast.squareInitial.column - move.squareInitial.column).abs() == 1;
+    if (!arePiecesInAdjacentColumns) {
+      return false;
+    }
+    var willPiecesBeInSameColumn = moveLast.squareInitial.column == move.squareFinal.column;
+    if (!willPiecesBeInSameColumn) {
+      return false;
+    }
     return true;
   }
 
@@ -315,7 +361,7 @@ class Game {
     switch (piece.type) {
 
       case TypePiece.king:
-        var deltas = [[1, 1], [1, 0], [1, -1], [0, 1], [0, -1], [-1, 1], [-1, 0], [-1, -1]];
+        var deltas = [[1, 1], [1, 0], [1, -1], [0, 1], [0, -1], [-1, 1], [-1, 0], [-1, -1], [2, 0], [-2, 0]];
         for (List<int> delta in deltas) {
           List<Square> path = [];
           var squarePath = Square(square.column , square.row);
@@ -324,10 +370,16 @@ class Game {
           }
           squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
           var pieceAtSquarePath = pieces[squarePath];
-          if (pieceAtSquarePath == null || pieceAtSquarePath.color != colorToMove) {
-            path.add(squarePath);
+          if (delta[0].abs() <= 1 && delta[1].abs() <= 1) {
+            if (pieceAtSquarePath == null || pieceAtSquarePath.color != colorToMove) {
+              path.add(squarePath);
+            }
+            paths.add(path);
           }
-          paths.add(path);
+          else if (!isChecking && isMoveCastling(Move(square, squarePath))) {
+            path.add(squarePath);
+            paths.add(path);
+          }
         }
         break;
 
@@ -438,7 +490,7 @@ class Game {
           if (isChecking) {
             path.add(squarePath);
           }
-          if (delta[1] == 0 && !isChecking) {
+          if (!isChecking && delta[1] == 0) {
             while (squarePath.inBounds) {
               squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
               var pieceAtSquarePath = pieces[squarePath];
@@ -452,12 +504,12 @@ class Game {
           else if (delta[1] != 0) {
             squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
             var pieceAtSquarePath = pieces[squarePath];
-            if (pieceAtSquarePath != null && pieceAtSquarePath.color != colorToMove) {
+            var isEnPassant = isMoveEnPassant(Move(square, squarePath));
+            if ((pieceAtSquarePath != null && pieceAtSquarePath.color != colorToMove) || isEnPassant) {
               path.add(squarePath);
             }
             paths.add(path);
           }
-          // TODO: EN PASSANT
         }
         break;
 
