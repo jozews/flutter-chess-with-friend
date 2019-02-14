@@ -123,11 +123,11 @@ class Game {
 
     // get checks of king color to move
     // ...
-    var entryPieceKingColorToMove = getEntriesPiecesFiltered(TypePiece.king, colorToMove).first;
-    var squareKingColorToMove = entryPieceKingColorToMove.key;
-    var colorToMoveOpposite = colorToMove == ColorPiece.white ? ColorPiece.black : ColorPiece.white;
-    var entryPiecesColorToMoveOpposite = getEntriesPiecesFiltered(null, colorToMoveOpposite);
-    var pathsChecking = entryPiecesColorToMoveOpposite.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKingColorToMove));
+    var entryPieceKing = getEntriesPiecesFiltered(TypePiece.king, colorToMove).first;
+    var squareKing = entryPieceKing.key;
+    var colorChecking = colorToMove == ColorPiece.white ? ColorPiece.black : ColorPiece.white;
+    var entryPiecesColorChecking = getEntriesPiecesFiltered(null, colorChecking);
+    var pathsChecking = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
 
     // if double check and king does not move return empty
     // ...
@@ -151,7 +151,7 @@ class Game {
     // ...
     if (pieceAtSquareInitial.type == TypePiece.king) {
       squaresFinalValid = squaresFinalValid.where((squareFinal) {
-        for (MapEntry<Square, Piece> entryPiece in entryPiecesColorToMoveOpposite) {
+        for (MapEntry<Square, Piece> entryPiece in entryPiecesColorChecking) {
           var pathCheckingIsNotEmpty = pathOfPieceToSquare(entryPiece.value, squareFinal).isNotEmpty;
           if (!pathCheckingIsNotEmpty) {
             return false;
@@ -163,7 +163,7 @@ class Game {
 
     // if square initial is in pin path filter out where square leaves pinning path
     // ...
-    var pathsPinning = entryPiecesColorToMoveOpposite.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKingColorToMove, withPinning: true));
+    var pathsPinning = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, withPinning: true));
     for (List<Square> pathPinning in pathsPinning) {
       var isSquareInitialInPathCheck = pathPinning.contains(squareInitial);
       if (isSquareInitialInPathCheck) {
@@ -246,22 +246,22 @@ class Game {
 
     // get checks of king color to move
     // ...
-    var colorToMoveOpposite = colorToMove == ColorPiece.black ? ColorPiece.white : ColorPiece.black;
     var entryKing = getEntriesPiecesFiltered(TypePiece.king, colorToMove).first;
     var squareKing = entryKing.key;
     var squaresKingFinalValid = getSquaresFinalForMovesValid(squareKing);
-    var entryPiecesColorToMoveOpposite = getEntriesPiecesFiltered(null, colorToMoveOpposite);
-    var pathsCheckingKing = entryPiecesColorToMoveOpposite.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
+    var colorChecking = colorToMove == ColorPiece.black ? ColorPiece.white : ColorPiece.black;
+    var entryPiecesChecking = getEntriesPiecesFiltered(null, colorChecking);
+    var pathsChecking = entryPiecesChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
 
     // checkmate
     // ...
-    if (pathsCheckingKing.isNotEmpty && squaresKingFinalValid.isEmpty) {
-      if (pathsCheckingKing.length == 1) {
+    if (pathsChecking.isNotEmpty && squaresKingFinalValid.isEmpty) {
+      if (pathsChecking.length == 1) {
         var canCheckmateBeCovered = false;
         var piecesColorToMove = getEntriesPiecesFiltered(null, colorToMove).where((entry) => entry.value.type != TypePiece.king);
         for (MapEntry<Square, Piece> pieceColorToMove in piecesColorToMove) {
           var squaresPieceFinalValid = getSquaresFinalForMovesValid(pieceColorToMove.key);
-          var pieceWithValidMoveInCheckingPath = squaresPieceFinalValid.where((squareFinal) => pathsCheckingKing.first.contains(squareFinal));
+          var pieceWithValidMoveInCheckingPath = squaresPieceFinalValid.where((squareFinal) => pathsChecking.first.contains(squareFinal));
           if (pieceWithValidMoveInCheckingPath.isNotEmpty) {
             canCheckmateBeCovered = true;
             break;
@@ -278,7 +278,7 @@ class Game {
 
     // stalemate
     // ...
-    else if (pathsCheckingKing.isEmpty && squaresKingFinalValid.isEmpty) {
+    else if (pathsChecking.isEmpty && squaresKingFinalValid.isEmpty) {
       var piecesColorToMove = getEntriesPiecesFiltered(null, colorToMove);
       var isStalemate = true;
       for (MapEntry<Square, Piece> piece in piecesColorToMove) {
@@ -311,15 +311,71 @@ class Game {
   // * DOES NOT VALIDATES
   bool isMoveCastling(Move move) {
     var piece = pieces[move.squareInitial];
-    if (piece == null || piece.type != TypePiece.king) {
+    if (piece == null) {
       return false;
     }
-    var isColumnDeltaAbsoluteMoreThan1 = (move.squareInitial.column - move.squareFinal.column).abs() > 1;
-    return isColumnDeltaAbsoluteMoreThan1;
+    var isPieceKing = piece.type == TypePiece.king;
+    if (!isPieceKing) {
+      return false;
+    }
+    var isColumnDelta2 = (move.squareInitial.column - move.squareFinal.column).abs() == 2;
+    if (!isColumnDelta2) {
+      return false;
+    }
+    var isRowDelta0 = move.squareInitial.row == move.squareFinal.row;
+    if (!isRowDelta0) {
+      return false;
+    }
+    var isKingInStartPosition = piece.squareFirst == move.squareInitial;
+    if (!isKingInStartPosition) {
+      return false;
+    }
+    var columnRook = move.squareFinal.column > move.squareInitial.column ? 8 : 1;
+    var rowRook = piece.color == ColorPiece.white ? 1 : 8;
+    var squareRook = Square(columnRook, rowRook);
+    var pieceRook = pieces[squareRook];
+    if (pieceRook == null) {
+      return false;
+    }
+    for (Move m in moves) {
+      // if king has moved return false
+      if (m.squareInitial == piece.squareFirst) {
+        return false;
+      }
+      // if rook has moved return false
+      if (m.squareInitial == pieceRook.squareFirst) {
+        return false;
+      }   
+    }
+    var countColumnsInBetween = (move.squareInitial.column - columnRook).abs() - 1; // -1 to exclude rook square
+    var deltaColumn = columnRook == 8 ? 1 : -1;
+    var colorChecking = piece.color == ColorPiece.white ? ColorPiece.black : ColorPiece.white;
+    for (int column in List<int>.generate(countColumnsInBetween, (i) => move.squareInitial.column + deltaColumn*i)) {
+      var square = Square(column, rowRook);
+      var pieceAtSquare = pieces[square];
+      if (pieceAtSquare != null && pieceAtSquare != piece) {
+        return false;
+      }
+      var piecesCheck = getEntriesPiecesFiltered(null, colorChecking);
+      for (MapEntry<Square, Piece> pieceCheck in piecesCheck) {
+        if (pathOfPieceToSquare(pieceCheck.value, square).isNotEmpty) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
 
   bool isMoveEnPassant(Move move) {
+    var piece = pieces[move.squareInitial];
+    if (piece == null) {
+      return false;
+    }
+    var isPiecePawn = piece.type == TypePiece.pawn;
+    if (!isPiecePawn) {
+      return false;
+    }
     if (moves.isEmpty) {
       return false;
     }
