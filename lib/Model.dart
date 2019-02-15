@@ -18,7 +18,7 @@ class Piece {
 
   @override
   String toString() {
-    return "${isWhite ? 'white' : 'black'} $type $squareFirst";
+    return "${isWhite ? 'white' : 'black'} $type";
   }
 
   bool operator ==(o) => o is Piece && o.squareFirst == squareFirst;
@@ -147,14 +147,7 @@ class Game {
     // ...
     // ...
     List<List<Square>> paths = pathsOfPiece(pieceAtSquareInitial, isChecking: false);
-
-    // filter out where square final is not empty or takes piece
-    // ...
-    // squaresFinalValid = squaresFinalValid.where((squareFinal) {
-    //   var pieceAtSquareFinal = pieces[squareFinal];
-    //   return pieceAtSquareFinal == null || pieceAtSquareFinal.isWhite != isWhiteToMove;
-    // }).toList();
-
+    
     // filter out where king steps into checking path
     // ...
     if (pieceAtSquareInitial.type == TypePiece.king) {
@@ -162,15 +155,19 @@ class Game {
       for (List<Square> path in paths) {
         List<Square> pathNotChecked = [];
         for (Square square in path) {
-          var isSquareChecked = false;
+          var isSquareNotChecked = true;
           for (MapEntry<Square, Piece> entryPiece in entryPiecesColorChecking) {
-            var pieceIsCheckingSquare = pathOfPieceToSquare(entryPiece.value, square).isNotEmpty;
-            if (pieceIsCheckingSquare) {
-              isSquareChecked = true;
+            // if king will capture piece continue
+            if (entryPiece.key == square) {
+              continue;
+            }
+            var pathChecking = pathOfPieceToSquare(entryPiece.value, square);
+            if (pathChecking.isNotEmpty) {
+              isSquareNotChecked = false;
               break;
             }
           }
-          if (!isSquareChecked) {
+          if (isSquareNotChecked) {
             pathNotChecked.add(square);
           }
           else {
@@ -183,8 +180,7 @@ class Game {
     }
 
     List<Square> squaresFinalValid = paths.expand((i) => i).toList();
-    print(squaresFinalValid);
-    
+
     // if square initial is in pin path filter out where square leaves pinning path
     // ...
     var pathsPinning = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, withPinning: true));
@@ -382,7 +378,7 @@ class Game {
   // * DOES NOT VALIDATES MOVE
   bool isMovePromotion(Move move) {
     var piece = pieces[move.squareInitial];
-    var isPiecePawn = piece == null || piece.type != TypePiece.pawn;
+    var isPiecePawn = piece.type == TypePiece.pawn;
     var promotionRow = piece.isWhite ? 8 : 1;
     var isSquareFinalPromotionRow = move.squareFinal.row == promotionRow;
     return isPiecePawn && isSquareFinalPromotionRow;
