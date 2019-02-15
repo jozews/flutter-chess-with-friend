@@ -255,20 +255,17 @@ class Game {
       var entryPieces = getEntriesPiecesFiltered(typePiece, isWhiteToMove);
       if (entryPieces.length > 1) {
         int columnInitial = columns[0] != columnFinal ? columns[0] : null;
-        entryPieces = entryPieces.where((entryPiece) {
-          if (columnInitial != null) {
-            return entryPiece.key.column == columnInitial;
-          }
-          return isMoveValid(Move(entryPiece.key, squareFinal),);
-        }).toList();
-        squareInitial = entryPieces.first.key;
-        if (entryPieces.length > 2) {
-          throw Exception("Ambiguous move PNG");
+        if (columnInitial != null) {
+          entryPieces = entryPieces.where((entryPiece) => entryPiece.key.column == columnInitial).toList();
         }
       }
-      else {
-        squareInitial = entryPieces.first.key;
+      if (entryPieces.length > 1) {
+        entryPieces = entryPieces.where((entryPiece) => isMoveValid(Move(entryPiece.key, squareFinal))).toList();
       }
+      if (entryPieces.length > 1) {
+        throw Exception("Ambiguous move PNG");
+      }
+      squareInitial = entryPieces.first.key;
     }
 
 
@@ -292,7 +289,7 @@ class Game {
     if (!isMoveValid(move)) {
       return false;
     }
-    
+        
     var isPromotion = isMovePromotion(move);
     if (isPromotion && typePiecePromotion == null) {
       return false;
@@ -324,7 +321,7 @@ class Game {
     pieces.remove(move.squareInitial);
     pieces[move.squareFinal] = pieceToMove;
     moves.add(move);
-    
+
     // toggle color to move
     // ...
     isWhiteToMove = !isWhiteToMove;
@@ -394,17 +391,17 @@ class Game {
   // * DOES NOT VALIDATES MOVE
   bool isMoveCastling(Move move) {
     var piece = pieces[move.squareInitial];
-    var isPieceKing = piece.type == TypePiece.king;
     var isColumnDelta2 = (move.squareInitial.column - move.squareFinal.column).abs() == 2;
-    return isPieceKing && isColumnDelta2;
+    return piece.type == TypePiece.king && isColumnDelta2;
   }
 
 
   // * DOES NOT VALIDATES MOVE
   bool isMoveEnPassant(Move move) {
+    var piece = pieces[move.squareInitial];
     var pieceCapture = pieces[move.squareFinal];
     var isColumnDelta1 = (move.squareInitial.column - move.squareFinal.column).abs() == 1;
-    return pieceCapture == null && isColumnDelta1;
+    return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
   }
 
 
@@ -494,7 +491,7 @@ class Game {
               path.add(squarePath);
               break;
             }
-            squarePath = Square(square.column + delta[0], square.row + delta[1]);
+            squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
           }
           paths.add(path);
         }
@@ -594,7 +591,7 @@ class Game {
               }
               isPinning = true;
             }
-            squarePath = Square(square.column + delta[0], square.row + delta[1]);
+            squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
           }
           paths.add(path);
         }
