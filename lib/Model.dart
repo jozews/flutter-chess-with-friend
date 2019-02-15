@@ -183,7 +183,8 @@ class Game {
     }
 
     List<Square> squaresFinalValid = paths.expand((i) => i).toList();
-
+    print(squaresFinalValid);
+    
     // if square initial is in pin path filter out where square leaves pinning path
     // ...
     var pathsPinning = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, withPinning: true));
