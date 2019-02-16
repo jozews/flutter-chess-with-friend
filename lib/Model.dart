@@ -119,7 +119,7 @@ class Game {
     return pieces;
   }
 
-  List<Square> getSquaresFinalValid(Square squareInitial) {
+  List<Square> getSquaresFinalMoveValid(Square squareInitial) {
 
     var pieceAtSquareInitial = pieces[squareInitial];
 
@@ -135,7 +135,7 @@ class Game {
     var squareKing = entryPieceKing.key;
     var colorChecking = !isWhiteToMove;
     var entryPiecesColorChecking = getEntriesPiecesFiltered(null, colorChecking);
-    var pathsChecking = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
+    var pathsChecking = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, forChecking: true));
 
     // if double check and king does not move return empty
     // ...
@@ -146,8 +146,8 @@ class Game {
     // adds squares
     // ...
     // ...
-    List<List<Square>> paths = pathsOfPiece(pieceAtSquareInitial, isChecking: false);
-    
+    List<List<Square>> paths = pathsOfPiece(pieceAtSquareInitial);
+
     // filter out where king steps into checking path
     // ...
     if (pieceAtSquareInitial.type == TypePiece.king) {
@@ -161,7 +161,7 @@ class Game {
             if (entryPiece.key == square) {
               continue;
             }
-            var pathChecking = pathOfPieceToSquare(entryPiece.value, square);
+            var pathChecking = pathOfPieceToSquare(entryPiece.value, square, forChecking: true);
             if (pathChecking.isNotEmpty) {
               isSquareNotChecked = false;
               break;
@@ -183,7 +183,7 @@ class Game {
 
     // if square initial is in pin path filter out where square leaves pinning path
     // ...
-    var pathsPinning = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, withPinning: true));
+    var pathsPinning = entryPiecesColorChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, forPinning: true));
     for (List<Square> pathPinning in pathsPinning) {
       var isSquareInitialInPathCheck = pathPinning.contains(squareInitial);
       if (isSquareInitialInPathCheck) {
@@ -207,42 +207,41 @@ class Game {
 
   // * CAN BE OPTIMIZED
   bool isMoveValid(Move move) {
-    var squaresFinalValid = getSquaresFinalValid(move.squareInitial);
+    var squaresFinalValid = getSquaresFinalMoveValid(move.squareInitial);
     var isMoveFinalInSquaresFinalValid = squaresFinalValid.where((squareFinal) => squareFinal == move.squareFinal).isNotEmpty;
     return isMoveFinalInSquaresFinalValid;
   }
 
   bool makeMovePNG(String movePNG) {
 
-    var movePNGReduced = movePNG.replaceAll("+", "").replaceAll("x", ""); // remove checks and captures
-
     Square squareInitial;
     Square squareFinal;
 
-    var isShortCastle = movePNGReduced == "O-O";
-    var isLongCastle = movePNGReduced == "O-O-O";
+    var isShortCastle = movePNG == "O-O";
+    var isLongCastle = movePNG == "O-O-O";
 
     // if not castle
     // ...
     // ...
     if (!isShortCastle && !isLongCastle) {
 
-      var charsPNG = movePNGReduced.split("");
+      var charsPNG = movePNG.split("");
       
       // get type piece
       // ...
-      var typePiece = movePNGReduced.contains("K") ? TypePiece.king 
-      : movePNGReduced.contains("Q") ? TypePiece.queen 
-      : movePNGReduced.contains("B") ? TypePiece.bishop
-      : movePNGReduced.contains("N") ? TypePiece.knight
-      : movePNGReduced.contains("R") ? TypePiece.rook
+      var typePiece = movePNG.contains("K") ? TypePiece.king 
+      : movePNG.contains("Q") ? TypePiece.queen 
+      : movePNG.contains("B") ? TypePiece.bishop
+      : movePNG.contains("N") ? TypePiece.knight
+      : movePNG.contains("R") ? TypePiece.rook
       : TypePiece.pawn; 
 
       // get square final
       // ...
       var columns = charsPNG.map<int>((c) => "_abcdefgh".split("").indexOf(c)).where((index) => index != -1).toList();
       var columnFinal = columns[columns.length - 1];
-      var rowFinal = int.parse(movePNGReduced.substring(movePNGReduced.length - 1));
+      var rows = charsPNG.map<int>((c) => "_12345678".split("").indexOf(c)).where((index) => index != -1).toList();
+      var rowFinal = rows[rows.length - 1];
       squareFinal = Square(columnFinal, rowFinal);
 
       // get square initial
@@ -254,6 +253,10 @@ class Game {
         int columnInitial = columns[0] != columnFinal ? columns[0] : null;
         if (columnInitial != null) {
           entryPieces = entryPieces.where((entryPiece) => entryPiece.key.column == columnInitial).toList();
+        }
+        int rowInitial = rows[0] != rowFinal ? rows[0] : null;
+        if (rowInitial != null) {
+          entryPieces = entryPieces.where((entryPiece) => entryPiece.key.row == rowInitial).toList();
         }
       }
       if (entryPieces.length > 1) {
@@ -327,10 +330,11 @@ class Game {
     // ...
     var entryKing = getEntriesPiecesFiltered(TypePiece.king, isWhiteToMove).first;
     var squareKing = entryKing.key;
-    var squaresKingFinalValid = getSquaresFinalValid(squareKing);
+    var squaresKingFinalValid = getSquaresFinalMoveValid(squareKing);
     var colorChecking = !isWhiteToMove;
     var entryPiecesChecking = getEntriesPiecesFiltered(null, colorChecking);
-    var pathsChecking = entryPiecesChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing));
+    var pathsChecking = entryPiecesChecking.map<List<Square>>((entryPiece) => pathOfPieceToSquare(entryPiece.value, squareKing, forChecking: true));
+    pathsChecking = pathsChecking.where((path) => path.isNotEmpty);
 
     // checkmate
     // ...
@@ -339,19 +343,21 @@ class Game {
         var canCheckmateBeCovered = false;
         var piecesColorToMove = getEntriesPiecesFiltered(null, isWhiteToMove).where((entry) => entry.value.type != TypePiece.king);
         for (MapEntry<Square, Piece> pieceColorToMove in piecesColorToMove) {
-          var squaresPieceFinalValid = getSquaresFinalValid(pieceColorToMove.key);
+          var squaresPieceFinalValid = getSquaresFinalMoveValid(pieceColorToMove.key);
           var pieceWithValidMoveInCheckingPath = squaresPieceFinalValid.where((squareFinal) => pathsChecking.first.contains(squareFinal));
           if (pieceWithValidMoveInCheckingPath.isNotEmpty) {
             canCheckmateBeCovered = true;
             break;
           }
         }
-        if (canCheckmateBeCovered) {
+        if (!canCheckmateBeCovered) {
           state = isWhiteToMove ? StateGame.checkmateByBlack : StateGame.checkmateByWhite;
+          print(state);
         }
       }
       else {
         state = isWhiteToMove ? StateGame.checkmateByBlack : StateGame.checkmateByWhite;
+        print(state);
       }
     }
 
@@ -361,7 +367,7 @@ class Game {
       var piecesColorToMove = getEntriesPiecesFiltered(null, isWhiteToMove);
       var isStalemate = true;
       for (MapEntry<Square, Piece> piece in piecesColorToMove) {
-        if (getSquaresFinalValid(piece.key).isNotEmpty) {
+        if (getSquaresFinalMoveValid(piece.key).isNotEmpty) {
           isStalemate = false;
           break;
         }
@@ -436,8 +442,9 @@ class Game {
     if (!isMoveLastDoublePawn) {
       return false;
     }    
-    var willPiecesBeInAdjacentRows = (moveLast.squareFinal.row - squareFinal.row).abs() == 1;
-    if (!willPiecesBeInAdjacentRows) {
+    var rowFinal = pieceMoveLast.isWhite ? 6 : 3;
+    var isRowFinal6or3 = squareFinal.row == rowFinal;
+    if (!isRowFinal6or3) {
       return false;
     }
     var willPiecesBeInSameColumn = moveLast.squareInitial.column == squareFinal.column;
@@ -448,7 +455,7 @@ class Game {
   }
 
 
-  List<List<Square>> pathsOfPiece(Piece piece, {isChecking = true, withPinning = false}) {
+  List<List<Square>> pathsOfPiece(Piece piece, {forChecking = false, forPinning = false}) {
     
     var square = squareOfPiece(piece);
 
@@ -461,7 +468,7 @@ class Game {
         for (List<int> delta in deltas) {
           var isPathCastling = delta[0].abs() == 1 && delta[1] == 0;
           List<Square> path = [];
-          if (isChecking) {
+          if (forChecking) {
             path.add(square);
           }
           var squarePath = Square(square.column + delta[0], square.row + delta[1]);
@@ -474,7 +481,7 @@ class Game {
             if ((pieceAtSquarePath != null && pieceAtSquarePath.isWhite != isWhiteToMove)) {
               break;
             }
-            if (isChecking || !isPathCastling) {
+            if (forChecking || !isPathCastling) {
               break;
             }
             // if long castle
@@ -499,7 +506,8 @@ class Game {
         for (List<int> delta in deltas) {
           List<Square> path = [];
           var isPinning = false;
-          if (isChecking) {
+          var isChecking = false;
+          if (forChecking) {
             path.add(square);
           }
           var squarePath = Square(square.column + delta[0], square.row + delta[1]);
@@ -509,8 +517,48 @@ class Game {
               break;
             }
             path.add(squarePath);
+            if (isChecking) {
+              break;
+            }
             if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite != isWhiteToMove) {
-              if (!withPinning || isPinning) {
+              if (forChecking && pieceAtSquarePath.type == TypePiece.king) {
+                isChecking = true;
+              }
+              else if (!forPinning || isPinning) {
+                break;
+              }
+              isPinning = true;
+            }
+            squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
+          }
+          paths.add(path);
+        }
+        break;
+
+      case TypePiece.rook:
+        var deltas = [[1, 0], [0, 1], [0, -1], [-1, 0]];
+        for (List<int> delta in deltas) {
+          List<Square> path = [];
+          var isPinning = false;
+          var isChecking = false;
+          if (forChecking) {
+            path.add(square);
+          }
+          var squarePath = Square(square.column + delta[0], square.row + delta[1]);
+          while (squarePath.inBounds) {
+            var pieceAtSquarePath = pieces[squarePath];
+            if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite == isWhiteToMove) {
+              break;
+            }
+            path.add(squarePath);
+            if (isChecking) {
+              break;
+            }
+            if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite != isWhiteToMove) {
+              if (forChecking && pieceAtSquarePath.type == TypePiece.king) {
+                isChecking = true;
+              }
+              else if (!forPinning || isPinning) {
                 break;
               }
               isPinning = true;
@@ -526,7 +574,8 @@ class Game {
         for (List<int> delta in deltas) {
           List<Square> path = [];
           var isPinning = false;
-          if (isChecking) {
+          var isChecking = false;
+          if (forChecking) {
             path.add(square);
           }
           var squarePath = Square(square.column + delta[0], square.row + delta[1]);
@@ -536,8 +585,14 @@ class Game {
               break;
             }
             path.add(squarePath);
+            if (isChecking) {
+              break;
+            }
             if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite != isWhiteToMove) {
-              if (!withPinning || isPinning) {
+              if (forChecking && pieceAtSquarePath.type == TypePiece.king) {
+                isChecking = true;
+              }
+              else if (!forPinning || isPinning) {
                 break;
               }
               isPinning = true;
@@ -552,7 +607,7 @@ class Game {
         var deltas = [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]];
         for (List<int> delta in deltas) {
           List<Square> path = [];
-          if (isChecking) {
+          if (forChecking) {
             path.add(square);
           }
           var squarePath = Square(square.column + delta[0], square.row + delta[1]);
@@ -567,43 +622,16 @@ class Game {
         }
         break;
 
-      case TypePiece.rook:
-        var deltas = [[1, 0], [0, 1], [0, -1], [-1, 0]];
-        for (List<int> delta in deltas) {
-          List<Square> path = [];
-          var isPinning = false;
-          if (isChecking) {
-            path.add(square);
-          }
-          var squarePath = Square(square.column + delta[0], square.row + delta[1]);
-          while (squarePath.inBounds) {
-            var pieceAtSquarePath = pieces[squarePath];
-            if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite == isWhiteToMove) {
-              break;
-            }
-            path.add(squarePath);
-            if (pieceAtSquarePath != null && pieceAtSquarePath.isWhite != isWhiteToMove) {
-              if (!withPinning || isPinning) {
-                break;
-              }
-              isPinning = true;
-            }
-            squarePath = Square(squarePath.column + delta[0], squarePath.row + delta[1]);
-          }
-          paths.add(path);
-        }
-        break;
-
       case TypePiece.pawn:
         var direction = piece.isWhite ? 1 : -1;
         var deltas = [[-1, direction], [0, direction], [1, direction]];
         for (List<int> delta in deltas) {
           List<Square> path = [];
-          if (isChecking) {
+          if (forChecking) {
             path.add(square);
           }
           var squarePath = Square(square.column + delta[0], square.row + delta[1]);
-          if (!isChecking && delta[0] == 0) {
+          if (!forChecking && delta[0] == 0) {
             var pieceAtSquarePath = pieces[squarePath];
             if (pieceAtSquarePath == null) {
               path.add(squarePath);
@@ -633,8 +661,8 @@ class Game {
   }
 
 
-  List<Square> pathOfPieceToSquare(Piece piece, Square square, {isChecking = true, withPinning = false}) {
-    var paths = pathsOfPiece(piece, isChecking: isChecking, withPinning: withPinning);
+  List<Square> pathOfPieceToSquare(Piece piece, Square square, {forChecking = false, forPinning = false}) {
+    var paths = pathsOfPiece(piece, forChecking: forChecking, forPinning: forPinning);
     var pathToSquare = paths.where((path) => path.contains(square)).toList();
     if (pathToSquare.isNotEmpty) {
       return pathToSquare.first;
