@@ -1,7 +1,7 @@
 
 import 'package:test/test.dart';
 
-import 'package:chess_umbrella/Model.dart';
+import 'package:chess_umbrella/Game.dart';
 
 
 void main() {

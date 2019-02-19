@@ -267,6 +267,10 @@ class Game {
     }).toList();
   }
 
+  Piece pieceAtSquare(Square square) {
+    return board[square];
+  }
+  
   Square squareOfPiece(Piece piece) {
     return board.entries.where((entry) => entry.value == piece).toList().first.key;
   }
