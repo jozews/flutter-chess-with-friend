@@ -3,13 +3,8 @@ import 'package:test/test.dart';
 
 import 'package:chess_umbrella/Model.dart';
 
-void main() {
 
-  test("Standard set", () {
-    var game = Game.standard();
-    expect(game.pieces.length, 32);
-    expect(game.getEntriesPiecesFiltered(TypePiece.bishop, true).length, 2);
-  });
+void main() {
 
   test('Alexander Beliavsky vs Larry Mark Christiansen', () {
     
@@ -17,8 +12,9 @@ void main() {
     var gamePNG = "d4;Nf6;c4;e6;g3;Bb4+;Bd2;Qe7;Bg2;Bxd2+;Qxd2;d6;Nc3;O-O;Nf3;e5;O-O;Re8;e4;Bg4;d5;Bxf3;Bxf3;Nbd7;b4;a5;a3;Ra6;Nb5;Nb6;Rac1;axb4;axb4;Qd7;Qd3;Ra4;Qb3;Rea8;Rfd1;h5;h4;g6;Rb1;Ng4;Be2;Qe7;Rbc1;c6;dxc6;bxc6;c5;dxc5;bxc5;Nd7;Nd6;Ndf6;Bc4;Nxf2;Kxf2;Ra3;Bxf7+;Kg7;Qe6;Ra2+;Kg1;R8a3;Ne8+;Kh6;Nxf6;Rxg3+;Kh1;Qxf7;Rd7;Qxf6;Qxf6;Rh2+;Kxh2";
     
     for (String movePNG in gamePNG.split(";")) {
-      print("Making move $movePNG");  
-      var isValid = game.makeMovePNG(movePNG);  
+      print("Making move $movePNG");
+      expect(game.state, StateGame.ongoing);
+      var isValid = game.makeMovePNG(movePNG);
       expect(isValid, true);
     }
 
@@ -31,8 +27,9 @@ void main() {
     var gamePNG = "Nf3;Nf6;c4;g6;Nc3;Bg7;d4;O-O;Bf4;d5;Qb3;dxc4;Qxc4;c6;e4;Nbd7;Rd1;Nb6;Qc5;Bg4;Bg5;Na4;Qa3;Nxc3;bxc3;Nxe4;Bxe7;Qb6;Bc4;Nxc3;Bc5;Rfe8+;Kf1;Be6;Bxb6;Bxc4+;Kg1;Ne2+;Kf1;Nxd4+;Kg1;Ne2+;Kf1;Nc3+;Kg1;axb6;Qb4;Ra4;Qxb6;Nxd1;h3;Rxa2;Kh2;Nxf2;Re1;Rxe1;Qd8+;Bf8;Nxe1;Bd5;Nf3;Ne4;Qb8;b5;h4;h5;Ne5;Kg7;Kg1;Bc5+;Kf1;Ng3+;Ke1;Bb4+;Kd1;Bb3+;Kc1;Ne2+;Kb1;Nc3+;Kc1;Rc2#";
 
     for (String movePNG in gamePNG.split(";")) {
-      print("Making move $movePNG");  
-      var isValid = game.makeMovePNG(movePNG);  
+      print("Making move $movePNG");
+      expect(game.state, StateGame.ongoing);
+      var isValid = game.makeMovePNG(movePNG);
       expect(isValid, true);
     }
 
@@ -46,10 +43,8 @@ void main() {
 
     for (String movePNG in gamePNG.split(";")) {
       print("Making move $movePNG");
-      if (movePNG == "Ka7") {
-        print("breakpoint");
-      }
-      var isValid = game.makeMovePNG(movePNG);  
+      expect(game.state, StateGame.ongoing);
+      var isValid = game.makeMovePNG(movePNG);
       expect(isValid, true);
     }
 

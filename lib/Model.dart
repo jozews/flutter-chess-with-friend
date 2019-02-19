@@ -52,6 +52,10 @@ List<Square> deltasKing() {
   return [Square(1, 1), Square(1, 0), Square(1, -1), Square(0, 1), Square(0, -1), Square(-1, 1), Square(-1, 0), Square(-1, -1)];
 }
 
+List<Square> deltasKingCastle() {
+  return [Square(1, 0), Square(-1, 0)];
+}
+
 List<Square> deltasQueen() {
   return [Square(1, 1), Square(1, 0), Square(1, -1), Square(0, 1), Square(0, -1), Square(-1, 1), Square(-1, 0), Square(-1, -1)];
 }
@@ -66,6 +70,16 @@ List<Square> deltasBishop() {
 
 List<Square> deltasKnight() {
   return [Square(2, 1), Square(2, -1), Square(1, 2), Square(1, -2), Square(-1, 2), Square(-1, -2), Square(-2, 1), Square(-2, -1)];
+}
+
+List<Square> deltasPawn({bool isWhite}) {
+  var deltaRow = isWhite? 1 : -1;
+  return [Square(1, deltaRow), Square(-1, deltaRow), Square(0, deltaRow)];
+}
+
+List<Square> deltasPawnCapture({bool isWhite}) {
+  var deltaRow = isWhite ? 1 : -1;
+  return [Square(1, deltaRow), Square(-1, deltaRow)];
 }
 
 List<Square> deltasForPiece(Piece piece, {bool isCheck}) {
@@ -88,20 +102,12 @@ List<Square> deltasForPiece(Piece piece, {bool isCheck}) {
         return deltasKnight();
 
       case TypePiece.pawn:
-        return deltasPawn(isWhite: piece.isWhite, isCheck: isCheck);
+        return deltasPawn(isWhite: piece.isWhite);
     }
 
     throw Exception("Non exhaustive switch");
 }
 
-List<Square> deltasPawn({bool isWhite, bool isCheck}) {
-  var deltaRow = isWhite ? 1 : -1;
-  return isCheck ? [Square(1, deltaRow), Square(-1, deltaRow)] : [Square(0, deltaRow)];
-}
-
-bool isDeltaContinuous(Square delta) {
-  return deltasQueen().contains(delta);
-}
 
 Square deltaReducedFromMove(Move move) {
   int columnDelta = move.square2.column == move.square1.column ? 0 : move.square2.column > move.square1.column ? 1 : -1;
@@ -109,13 +115,13 @@ Square deltaReducedFromMove(Move move) {
   return Square(columnDelta, rowDelta);
 }
 
-bool isDeltaValidForKingMove(Move move, {bool isCastle, bool isShort}) {
+bool isDeltaValidForKingMove(Move move, {bool isCastle = false}) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
-  if (!isCastle) {
-    return difsColumns.abs() <= 1 && diffRows.abs() <= 1;
+  if (isCastle) {
+    return difsColumns.abs() == 2 && diffRows == 0;
   }
-  return difsColumns == (isShort ? 2 : -3) && diffRows == 0;
+  return difsColumns.abs() <= 1 && diffRows.abs() <= 1;
 }
 
 bool isDeltaValidForQueenMove(Move move) {
@@ -131,19 +137,52 @@ bool isDeltaValidForRookMove(Move move) {
 bool isDeltaValidForBishopMove(Move move) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
-  return difsColumns == diffRows;
+  return difsColumns.abs() == diffRows.abs();
 }
 
-bool isDeltaForKnightMove(Move move) {
+bool isDeltaValidForKnightMove(Move move) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
   return (difsColumns.abs() == 2 && diffRows.abs() == 1) || (difsColumns.abs() == 1 && diffRows.abs() == 2);
 }
 
-bool isDeltaValidForPawnMove(Move move, {bool isWhite, bool isCapture}) {
+bool isDeltaValidForPawnMove(Move move, {bool isWhite, bool isCapture, Square squareEnPassant}) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
-  return isCapture ? difsColumns.abs() == 1 && diffRows.abs() == 1 : difsColumns == 0 && diffRows <= (isWhite ? 2 : 1); 
+  var direction = isWhite ? 1 : -1;
+  if (squareEnPassant != null) {
+    return difsColumns == 0 && diffRows == 1*direction;
+  }
+  if (isCapture) {
+    return difsColumns.abs() == 1 && diffRows == 1*direction;
+  }
+  return difsColumns == 0 && (diffRows == 1*direction || diffRows == 2*direction); 
+}
+
+bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bool isCapture, Square squareEnPassant}) {
+
+      switch (piece.type) {
+
+      case TypePiece.king:
+        return isDeltaValidForKingMove(move, isCastle: isCastle);
+
+      case TypePiece.queen:
+        return isDeltaValidForQueenMove(move);
+
+      case TypePiece.rook:
+        return isDeltaValidForRookMove(move);
+
+      case TypePiece.bishop:
+        return isDeltaValidForBishopMove(move);
+
+      case TypePiece.knight:
+        return isDeltaValidForKnightMove(move);
+
+      case TypePiece.pawn:
+        return isDeltaValidForPawnMove(move, isWhite: piece.isWhite, isCapture: isCapture, squareEnPassant: squareEnPassant);
+    }
+
+    throw Exception("Non exhaustive switch");
 }
 
 enum TypePiece {
@@ -205,19 +244,498 @@ class Move {
 
 class Game {
 
-  Map<Square, Piece> pieces;
+  Map<Square, Piece> board;
   StateGame state;
   bool isWhiteToMove;
   List<Move> moves;
 
   Game.standard() {
-    pieces = piecesStandard();
+    board = piecesStandard();
     state = StateGame.ongoing;
     isWhiteToMove = true;
     moves = [];
   }
 
+
+  List<MapEntry<Square, Piece>> getEntriesPiecesFiltered(TypePiece type, bool isWhite) {
+    return board.entries.where((entry) {
+      var piece = entry.value;
+      if ((type == null || piece.type == type) && (isWhite == null || piece.isWhite == isWhite)) {
+        return true;
+      }
+      return false;
+    }).toList();
+  }
+
+  Square squareOfPiece(Piece piece) {
+    return board.entries.where((entry) => entry.value == piece).toList().first.key;
+  }
+
+  List<Square> squaresFromSquareWithDelta(Square square1, Square delta, {int limit = -1, Square stopBeforeSquare, bool stopBeforePiece = false, bool stopBeforePieceIsWhite, bool stopAfterPiece = false, bool stopAfterPieceIsWhite, bool addTrailingSquare1 = false, bool addSquare1 = false}) {
+    List<Square> squares = [];
+    var square = Square(square1.column + delta.column, square1.row + delta.row);
+    while (square.inBounds && (limit == -1 || squares.length < limit)) {
+      if (stopBeforeSquare != null && square == stopBeforeSquare) {
+        break;
+      }
+      var pieceAtSquare = board[square];
+      if (stopBeforePiece && pieceAtSquare != null) {
+        break;
+      }
+      if (stopBeforePieceIsWhite != null && pieceAtSquare != null && pieceAtSquare.isWhite == stopBeforePieceIsWhite) {
+        break;
+      }
+      squares.add(square);
+      if (stopAfterPiece && pieceAtSquare != null) {
+        break;
+      }
+      if (stopAfterPieceIsWhite != null && pieceAtSquare != null && pieceAtSquare.isWhite == stopAfterPieceIsWhite) {
+        break;
+      }
+      square = Square(square.column + delta.column, square.row + delta.row);
+    }
+    if (squares.isNotEmpty) {
+      if (addTrailingSquare1) {
+        var squareOneBefore = square = Square(square.column - delta.column, square.row - delta.row);
+        squares.insert(0, squareOneBefore);
+      }
+      if (addSquare1) {
+        squares.insert(0, square1);
+      }
+    }
+    return squares;
+  }
+
+  bool areSquaresEmpty(List<Square> squares) {
+    for (Square square in squares) {
+      if (board[square] != null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  List<Piece> piecesInSquares(List<Square> squares) {
+    return squares.map<Piece>((square) => board[square]).where((piece) => piece != null).toList();
+  }
+
+
+  List<List<Square>> getChecks(Piece king, {Square squareToMove}) {
+
+    var squareOfKing = squareOfPiece(king);
+    if (squareToMove != null) {
+      squareOfKing = squareToMove;
+    }
+    var isKingSquare = squareToMove != null;
+    
+    List<List<Square>> checks = [];
+
+    for (Square deltaCheck in deltasCheck()) {
+      var squares = squaresFromSquareWithDelta(squareOfKing, deltaCheck, addTrailingSquare1: isKingSquare, stopAfterPiece: true, addSquare1: true);
+      if (squares.isEmpty) {
+        continue;
+      }
+      var squareLast = squares[squares.length - 1];
+      var pieceLast = board[squareLast];
+      if (pieceLast == null || pieceLast.isWhite != !isWhiteToMove) {
+        continue;
+      }
+      var moveLastToKing = Move(squareLast, squareOfKing);
+      var isDeltaMoveLastToKingValid = isDeltaValidForPieceMove(pieceLast, moveLastToKing, isCapture: true);
+      if (!isDeltaMoveLastToKingValid) {
+        continue;
+      }
+      checks.add(squares);
+    }
+
+    return checks;
+  }
+
+
+  List<Square> getPin(Piece piece) {
+
+    var squarePiece = squareOfPiece(piece);
+    var squareKing = getEntriesPiecesFiltered(TypePiece.king, piece.isWhite).first.key;
+
+    var moveToKing = Move(squarePiece, squareKing);
+    var deltaToKing = deltaReducedFromMove(moveToKing);
+
+    var squaresToKing = squaresFromSquareWithDelta(squarePiece, deltaToKing, stopAfterPiece: true, addSquare1: true);
+    var pieceLastSquaresToKing = board[squaresToKing[squaresToKing.length - 1]];
+    if (pieceLastSquaresToKing == null || pieceLastSquaresToKing.type != TypePiece.king || pieceLastSquaresToKing.isWhite != piece.isWhite) {
+      return null;
+    }
+
+    var deltaToKingReversed = Square(-deltaToKing.column, -deltaToKing.row);
+    var squaresToKingReversed = squaresFromSquareWithDelta(squarePiece, deltaToKingReversed, stopAfterPiece: true);
+    if (squaresToKingReversed.isEmpty) {
+      return null;
+    }
+
+    var squareLastSquaresToKingReversed = squaresToKingReversed[squaresToKingReversed.length - 1];
+    var pieceLastSquaresToKingReversed = board[squareLastSquaresToKingReversed];
+    if (pieceLastSquaresToKingReversed == null || pieceLastSquaresToKing.isWhite != !piece.isWhite) {
+      return null;
+    }
+
+    var moveLastSquaresToKingReversedToPiece = Move(squareLastSquaresToKingReversed, squarePiece);
+    var isDeltaMoveLastSquaresToKingReversedToPieceValid = isDeltaValidForPieceMove(pieceLastSquaresToKingReversed, moveLastSquaresToKingReversedToPiece, isCapture: true);
+    if (!isDeltaMoveLastSquaresToKingReversedToPieceValid) {
+      return null;
+    }
+
+    return squaresToKing + squaresToKingReversed;
+  }
+
+
+  bool canCastleKing(Piece kingToMove, {bool isShort}) {
+    var isWhite = kingToMove.isWhite;
+    var squareRook = Square(isShort ? 8 : 1, isWhite ? 1 : 8);
+    var rook = board[squareRook];
+    if (rook == null) {
+      return false;
+    }
+    for (Move m in moves) {
+      // if king or rook has moved return false
+      if (kingToMove.squareFirst == m.square1 || rook.squareFirst == m.square1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Piece canCaptureEnPassant() {
+
+    if (moves.isEmpty) {
+      return null;
+    }
+    var moveLast = moves[moves.length -1];
+    var pieceMoveLast = board[moveLast.square2];
+    if (pieceMoveLast == null) {
+      return null;
+    }
+    var isPieceMoveLastPawn = pieceMoveLast.type == TypePiece.pawn;
+    if (!isPieceMoveLastPawn) {
+      return null;
+    }
+    var isMoveLastDoublePawn = (moveLast.square1.row - moveLast.square2.row).abs() == 2;
+    if (!isMoveLastDoublePawn) {
+      return null;
+    }
+    return pieceMoveLast;
+  }
+
+  bool canDoubleMove(Square square1) {
+    var pieceToMove = board[square1];
+    return pieceToMove.squareFirst == square1;
+  }
+
+  bool isMoveValid(Move move) {
+
+    var pieceToMove = board[move.square1];
+
+    if (pieceToMove == null || pieceToMove.isWhite != isWhiteToMove) {
+      return false;
+    }
+
+    var pieceAtSquare2 = board[move.square2];
+    if (pieceAtSquare2 != null && pieceAtSquare2.isWhite == pieceToMove.isWhite) {
+      return false;
+    }
+        
+    var entriesKingToMove = getEntriesPiecesFiltered(TypePiece.king, isWhiteToMove);
+
+    var checks = getChecks(entriesKingToMove.first.value);
+
+    // king must step out of double check
+    if (checks.length == 2 && pieceToMove.type != TypePiece.king) {
+      return false;
+    }
+
+    // check must be covered
+    if (checks.length == 1 && pieceToMove.type != TypePiece.king && !checks.first.contains(move.square2)) {
+      return false;
+    }
+
+    switch (pieceToMove.type) {
+
+      case TypePiece.king:
+        if (isDeltaValidForKingMove(move)) {
+          var checks = getChecks(pieceToMove, squareToMove: move.square2);
+          if (checks.isNotEmpty) {
+            return false;
+          }
+        }
+        else if (isDeltaValidForKingMove(move, isCastle: true)) {
+          var deltaCastle = deltaReducedFromMove(move);
+          var isShort = deltaCastle.column < 0 ? false : true;
+          if (!canCastleKing(pieceToMove, isShort: isShort)) {
+            return false;
+          }
+          var countSquaresToCastle = isShort ? 2 : 3;
+          var squaresToCastle = squaresFromSquareWithDelta(move.square1, deltaCastle, limit: countSquaresToCastle, stopBeforePiece: true);
+          if (squaresToCastle.length != countSquaresToCastle) {
+            return false;
+          }
+          for (Square square in squaresToCastle) {
+            var checks = getChecks(pieceToMove, squareToMove: square);
+            if (checks.isNotEmpty) {
+              return false;
+            }
+          }
+        }
+        else  {
+          return false;
+        }
+        break;
+
+      case TypePiece.queen:
+        if (!isDeltaValidForQueenMove(move)) {
+          return false;
+        }
+        var delta = deltaReducedFromMove(move);
+        var squares = squaresFromSquareWithDelta(move.square1, delta, stopBeforeSquare: move.square2);
+        var pieceInBetween = piecesInSquares(squares);
+        if (pieceInBetween.isNotEmpty) {
+          return false;
+        }
+        break;
+
+      case TypePiece.rook:
+        if (!isDeltaValidForRookMove(move)) {
+          return false;
+        }
+        var delta = deltaReducedFromMove(move);
+        var squares = squaresFromSquareWithDelta(move.square1, delta, stopBeforeSquare: move.square2);
+        var pieceInBetween = piecesInSquares(squares);
+        if (pieceInBetween.isNotEmpty) {
+          return false;
+        }
+        break;
+
+      case TypePiece.bishop:
+        if (!isDeltaValidForBishopMove(move)) {
+          return false;
+        }
+        var delta = deltaReducedFromMove(move);
+        var squares = squaresFromSquareWithDelta(move.square1, delta, stopBeforeSquare: move.square2);
+        var pieceInBetween = piecesInSquares(squares);
+        if (pieceInBetween.isNotEmpty) {
+          return false;
+        }
+        break;
+
+      case TypePiece.knight:
+        if (!isDeltaValidForKnightMove(move)) {
+          return false;
+        }
+        break;
+
+      case TypePiece.pawn:
+        if (isDeltaValidForPawnMove(move, isWhite: pieceToMove.isWhite, isCapture: false)) {
+          var delta = deltaReducedFromMove(move);
+          var limit = (move.square1.row - move.square2.row).abs();
+          if (limit == 2 && !canDoubleMove(move.square1)) {
+            return false;
+          }
+          var squares = squaresFromSquareWithDelta(move.square1, delta, limit:limit);
+          if (!areSquaresEmpty(squares)) {
+            return false;
+          }
+        }
+        else if (isDeltaValidForPawnMove(move, isWhite: pieceToMove.isWhite, isCapture: true)) {
+          var captureEnPassant = canCaptureEnPassant();
+          if (captureEnPassant != null) {
+            var squareEnPassant = squareOfPiece(captureEnPassant);
+            var isValid = isDeltaValidForPawnMove(move, isWhite:pieceToMove.isWhite, squareEnPassant: squareEnPassant);
+            if (!isValid) {
+              return false;
+            }
+          }
+          else if (pieceAtSquare2 == null) {
+            return false;
+          }
+        }
+        else {
+          return false ;
+        }
+        break;
+    }
+
+
+    // move must not leave pin
+    if (pieceToMove.type != TypePiece.king) {
+      var pin = getPin(pieceToMove);
+      if (pin != null && !pin.contains(move.square2)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
+  List<Move> validMoves(Square square1) {
+
+    var pieceToMove = board[square1];
+
+    if (pieceToMove == null || pieceToMove.isWhite != isWhiteToMove) {
+      return [];
+    }
+
+    List<Square> squares2 = [];
+    var deltas = deltasForPiece(pieceToMove);
+
+    switch (pieceToMove.type) {
+
+      case TypePiece.king:
+        for (Square delta in deltas) {
+          var isCastleDelta = deltasKingCastle().contains(delta);
+          var squares = squaresFromSquareWithDelta(square1, delta, limit: isCastleDelta ? 2 : 1, stopBeforePieceIsWhite: pieceToMove.isWhite, stopAfterPiece: isCastleDelta);
+          squares2.addAll(squares);
+        }
+        break;
+
+      case TypePiece.queen:
+        for (Square delta in deltas) {
+          var squares = squaresFromSquareWithDelta(square1, delta, stopBeforePieceIsWhite: pieceToMove.isWhite, stopAfterPieceIsWhite: !pieceToMove.isWhite);
+          squares2.addAll(squares);
+        }
+        break;
+
+      case TypePiece.rook:
+        for (Square delta in deltas) {
+          var squares = squaresFromSquareWithDelta(square1, delta, stopBeforePieceIsWhite: pieceToMove.isWhite, stopAfterPieceIsWhite: !pieceToMove.isWhite);
+          squares2.addAll(squares);
+        }
+        break;
+
+      case TypePiece.bishop:
+        for (Square delta in deltas) {
+          var squares = squaresFromSquareWithDelta(square1, delta, stopBeforePieceIsWhite: pieceToMove.isWhite, stopAfterPieceIsWhite: !pieceToMove.isWhite);
+          squares2.addAll(squares);
+        }
+        break;
+
+      case TypePiece.knight:
+        for (Square delta in deltas) {
+          var squares = squaresFromSquareWithDelta(square1, delta, addSquare1: false, limit: 1, stopBeforePieceIsWhite: pieceToMove.isWhite);
+          squares2.addAll(squares);
+        }
+        break;
+
+      case TypePiece.pawn:
+        for (Square delta in deltas) {
+          var isCastleCapture = deltasPawnCapture(isWhite: pieceToMove.isWhite).contains(delta);
+          var squares = squaresFromSquareWithDelta(square1, delta, limit: isCastleCapture ? 1 : 2, stopBeforePieceIsWhite: pieceToMove.isWhite, stopBeforePiece: !isCastleCapture, addSquare1: false);
+          squares2.addAll(squares);
+        }
+        break;
+    }
+
+    var moves = squares2.map((square) => Move(square1, square)).toList();
+    var movesValid = moves.where((move) => isMoveValid(move)).toList();
+    return movesValid;
+  }
+
+
+  // * does not validates
+  bool isMovePromotion(Move move) {
+    var piece = board[move.square1];
+    var isPiecePawn = piece.type == TypePiece.pawn;
+    var promotionRow = piece.isWhite ? 8 : 1;
+    var isSquareFinalPromotionRow = move.square2.row == promotionRow;
+    return isPiecePawn && isSquareFinalPromotionRow;
+  }
+
+  // * does not validates
+  bool isMoveCastling(Move move) {
+    var piece = board[move.square1];
+    var isColumnDelta2 = (move.square1.column - move.square2.column).abs() == 2;
+    return piece.type == TypePiece.king && isColumnDelta2;
+  }
+
+  // * does not validates
+  bool isMoveEnPassant(Move move) {
+    var piece = board[move.square1];
+    var pieceCapture = board[move.square2];
+    var isColumnDelta1 = (move.square1.column - move.square2.column).abs() == 1;
+    return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
+  }
+
+  bool makeMove(Move move, {TypePiece typePiecePromotion}) {
+
+    // validate move
+    if (!isMoveValid(move)) {
+      return false;
+    }
+        
+    var isPromotion = isMovePromotion(move);
+    if (isPromotion && typePiecePromotion == null) {
+      print("PROMOTE PIECE REQUIRED");
+      return false;
+    }
+
+    // make move
+    var pieceToMove = board[move.square1];
+    if (isPromotion) {
+      pieceToMove.type = typePiecePromotion;
+    }
+    else {
+      // if castling move rook
+      if (isMoveCastling(move)) {
+        var columnInitialRook = move.square2.column - move.square1.column > 0 ? 8 : 1;
+        var squareInitialRook = Square(columnInitialRook, move.square1.row);
+        var columnFinalRook = (move.square1.column + move.square2.column) ~/ 2;
+        var squareFinalRook = Square(columnFinalRook, move.square1.row);
+        var pieceRook = board.remove(squareInitialRook);
+        board[squareFinalRook] = pieceRook;
+      }
+      // if en passant remove taken pawn
+      else if (isMoveEnPassant(move)) {
+        var squareOfCapture = Square(move.square2.column, move.square1.row);
+        board.remove(squareOfCapture);
+      }
+    }
+
+    // * update board after checking isMoveCastling isMoveEnPassant as they read the board
+    board.remove(move.square1);
+    board[move.square2] = pieceToMove;
+    moves.add(move);
+
+    // toggle isWhiteToMove
+    isWhiteToMove = !isWhiteToMove;
+    
+    var entryKingToMove = getEntriesPiecesFiltered(TypePiece.king, isWhiteToMove).first;
+    var entriesPiecesToMove = getEntriesPiecesFiltered(null, isWhiteToMove);
+    var checks = getChecks(entryKingToMove.value);
+
+    var areThereValidMoves = false;
+    for (MapEntry<Square, Piece> entryPiece in entriesPiecesToMove) {
+      if (validMoves(entryPiece.key).isNotEmpty) {
+        areThereValidMoves = true;
+        break;
+      }
+    }
+
+    if (!areThereValidMoves) {
+      if (checks.isNotEmpty) {
+        state = isWhiteToMove ? StateGame.checkmateByBlack :StateGame.checkmateByWhite;
+      }
+      else {
+        state = StateGame.ongoing;
+      }
+    }
+    
+    return true;
+  }
+
+
   bool makeMovePNG(String movePNG) {
+
+    if (movePNG == "Rc2#") {
+      bool breakme;
+    }
 
     Square squareInitial;
     Square squareFinal;
@@ -254,6 +772,10 @@ class Game {
 
       // get column and row inital
       var entryPieces = getEntriesPiecesFiltered(typePiece, isWhiteToMove);
+      if (entryPieces.isEmpty) {
+        print(entryPieces);
+        throw Exception("Invalid PNG move");
+      }
       if (entryPieces.length > 1) {
         int columnInitial = columns[0] != columnFinal ? columns[0] : null;
         if (columnInitial != null) {
@@ -268,7 +790,8 @@ class Game {
         entryPieces = entryPieces.where((entryPiece) => isMoveValid(Move(entryPiece.key, squareFinal))).toList();
       }
       if (entryPieces.length > 1) {
-        throw Exception("Ambiguous move PNG");
+        print(entryPieces);
+        throw Exception("Ambiguous PNG move");
       }
       squareInitial = entryPieces.first.key;
     }
@@ -286,409 +809,4 @@ class Game {
   }
 
 
-  List<MapEntry<Square, Piece>> getEntriesPiecesFiltered(TypePiece type, bool isWhite) {
-    return pieces.entries.where((entry) {
-      var piece = entry.value;
-      if ((type == null || piece.type == type) && (isWhite == null || piece.isWhite == isWhite)) {
-        return true;
-      }
-      return false;
-    }).toList();
-  }
-
-  Square squareOfPiece(Piece piece) {
-    return pieces.entries.where((entry) => entry.value == piece).toList().first.key;
-  }
-
-  List<Square> pathWithDelta(Square square1, Square delta, {int limit, bool untilPieceIsWhite, bool isKingSquare = false}) {
-    List<Square> path = [];
-    var squarePath = square1;
-    while (squarePath.inBounds && (limit == null || path.length < limit)) {
-      squarePath = Square(square1.column + delta.column, square1.row + delta.row);
-      path.add(squarePath);
-      var pieceAtSquarePath = pieces[squarePath];
-      if (untilPieceIsWhite != null && pieceAtSquarePath != null && pieceAtSquarePath.isWhite == untilPieceIsWhite) {
-        break;
-      }
-    }
-    if (path.isNotEmpty && isKingSquare) {
-      if (limit == null) {
-        var squareOneBefore = squarePath = Square(squarePath.column - delta.column, squarePath.row - delta.row);
-        path.insert(0, squareOneBefore);
-      }
-      path.insert(0, square1);
-    }
-    return path;
-  }
-
-  bool isPathEmpty(List<Square> path) {
-    for (Square square in path) {
-      if (pieces[square] != null) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  List<Piece> piecesInPath(List<Square> path) {
-    return path.map<Piece>((square) => pieces[square]).where((piece) => piece != null).toList();
-  }
-
-
-  List<List<Square>> getPathsCheck(Piece king, {Square squareToMove}) {
-
-    var squareOfKing = squareOfPiece(king);
-    if (squareToMove != null) {
-      squareOfKing = squareToMove;
-    }
-    var isKingSquare = squareToMove != null;
-    
-    List<List<Square>> pathsCheck = [];
-
-    for (Square deltaCheck in deltasCheck()) {
-      var isContinuous = isDeltaContinuous(deltaCheck);
-      var limit = isContinuous ? 1 : null;
-      var path = pathWithDelta(squareOfKing, deltaCheck, isKingSquare: isKingSquare, limit: limit, untilPieceIsWhite: !king.isWhite);
-      if (path.isEmpty) {
-        continue;
-      }
-      var pieceAtPathEnd = pieces[pieces.length];
-      if (pieceAtPathEnd == null || pieceAtPathEnd.isWhite != !isWhiteToMove) {
-        continue;
-      }
-      var doesPieceCanCheck = deltasForPiece(pieceAtPathEnd, isCheck: true).contains(deltaCheck);
-      if (!doesPieceCanCheck) {
-        continue;
-      }
-      var piecesOtherInPath = piecesInPath(path).where((piece) => piece != king && piece != pieceAtPathEnd);
-      if (!piecesOtherInPath.isNotEmpty) {
-        continue;
-      }
-      pathsCheck.add(path);
-    }
-
-    return pathsCheck;
-  }
-
-
-  List<Square> getPathPin(Piece piece) {
-
-    var squarePiece = squareOfPiece(piece);
-    var squareKing = getEntriesPiecesFiltered(TypePiece.king, piece.isWhite).first.key;
-
-    var movePieceToKing = Move(squarePiece, squareKing);
-    var deltaPieceToKing = deltaReducedFromMove(movePieceToKing);
-    var isDeltaPieceToKingContinuous = isDeltaContinuous(deltaPieceToKing);
-
-    if (!isDeltaPieceToKingContinuous) {
-      return null;
-    }
-
-    var pathPieceToKing = pathWithDelta(squarePiece, deltaPieceToKing);
-    if (!isPathEmpty(pathPieceToKing)) {
-      return null;
-    }
-
-    var deltaPieceToKingReversed = Square(-deltaPieceToKing.column, -deltaPieceToKing.row);
-    var pathPieceToKingReversed = pathWithDelta(squarePiece, deltaPieceToKingReversed, untilPieceIsWhite: !piece.isWhite);
-    if (pathPieceToKingReversed.isEmpty) {
-      return null;
-    }
-
-    var pieceAtEndOfPath = pieces[pathPieceToKingReversed[pathPieceToKingReversed.length - 1]];
-    if (pieceAtEndOfPath == null) {
-      return null;
-    }
-
-    var piecesOtherInPath = piecesInPath(pathPieceToKingReversed).where((piece) => piece != pieceAtEndOfPath);
-    if (piecesOtherInPath.isNotEmpty) {
-      return null;
-    }
-      
-    var doesPieceCanCheck = deltasForPiece(pieceAtEndOfPath, isCheck: true).contains(deltaPieceToKing);
-    if (!doesPieceCanCheck) {
-      return null;
-    }
-
-    return pathPieceToKing + pathPieceToKingReversed;
-  }
-
-
-  bool isMoveValid(Move move) {
-
-    var pieceToMove = pieces[move.square1];
-
-    if (pieceToMove == null || pieceToMove.isWhite != isWhiteToMove) {
-      return false;
-    }
-
-    var pieceAtSquare2 = pieces[move.square2];
-    if (pieceAtSquare2 != null && pieceAtSquare2.isWhite != pieceToMove.isWhite) {
-      return false;
-    }
-        
-    var entriesKingToMove = getEntriesPiecesFiltered(TypePiece.king, isWhiteToMove);
-
-    var pathsCheck = getPathsCheck(entriesKingToMove.first.value);
-
-    // king must step out of double check
-    if (pathsCheck.length == 2 && pieceToMove.type != TypePiece.king) {
-      return false;
-    }
-
-    // check must be covered
-    if (pathsCheck.length == 1 && pieceToMove.type != TypePiece.king && !pathsCheck.contains(pieceAtSquare2)) {
-      return false;
-    }
-
-    switch (pieceToMove.type) {
-
-      case TypePiece.king:
-        if (isDeltaValidForKingMove(move, isCastle: false)) {
-          var pathsCheck = getPathsCheck(pieceToMove, squareToMove: move.square2);
-          if (pathsCheck.isNotEmpty) {
-            return false;
-          }
-        }
-        else if (isDeltaValidForKingMove(move, isCastle: true, isShort: false)) {
-          if (!canCastle(isWhite: pieceToMove.isWhite, isShort: false)) {
-            return false;
-          }
-
-        }
-        else if (isDeltaValidForKingMove(move, isCastle: true, isShort: true)) {
-          if (!canCastle(isWhite: pieceToMove.isWhite, isShort: true)) {
-            return false;
-          }
-        }
-        break;
-
-      case TypePiece.queen:
-        if (!isDeltaValidForQueenMove(move)) {
-          return false;
-        }
-        var delta = deltaReducedFromMove(move);
-        var path = pathWithDelta(move.square1, delta);
-        var piecesPathWoCapture = piecesInPath(path).where((piece) => piece != pieceAtSquare2);
-        if (piecesPathWoCapture.isNotEmpty) {
-          return false;
-        }
-        break;
-
-      case TypePiece.rook:
-        if (!isDeltaValidForRookMove(move)) {
-          return false;
-        }
-        var delta = deltaReducedFromMove(move);
-        var path = pathWithDelta(move.square1, delta);
-        var piecesPathWoCapture = piecesInPath(path).where((piece) => piece != pieceAtSquare2);
-        if (piecesPathWoCapture.isNotEmpty) {
-          return false;
-        }
-        break;
-
-      case TypePiece.bishop:
-        if (!isDeltaValidForBishopMove(move)) {
-          return false;
-        }
-        var delta = deltaReducedFromMove(move);
-        var path = pathWithDelta(move.square1, delta);
-        var piecesPathWoCapture = piecesInPath(path).where((piece) => piece != pieceAtSquare2);
-        if (piecesPathWoCapture.isNotEmpty) {
-          return false;
-        }
-        break;
-
-      case TypePiece.knight:
-        if (!isDeltaForKnightMove(move)) {
-          return false;
-        }
-        break;
-
-      case TypePiece.pawn:
-        if (isDeltaValidForPawnMove(move, isWhite: pieceToMove.isWhite, isCapture: false)) {
-          var delta = deltaReducedFromMove(move);
-          var limit = (move.square1.row - move.square2.row).abs();
-          var path = pathWithDelta(move.square1, delta, limit:limit);
-          if (!isPathEmpty(path)) {
-            return false;
-          }
-        }
-        if (isDeltaValidForPawnMove(move, isWhite: pieceToMove.isWhite, isCapture: true)) {
-          var isEnPassant = canCaptureEnPassant(move);
-          if (pieceAtSquare2 == null && !isEnPassant) {
-            return false;
-          }
-        }
-        break;
-    }
-
-    // move must not leave pin path
-    if (pieceToMove.type != TypePiece.king) {
-      var pathPin = getPathPin(pieceToMove);
-      if (pathPin != null && !pathPin.contains(move.square2)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-
-  List<Move> validMoves(Square square1) {
-
-    List<Move> moves = [];
-    var pieceToMove = pieces[square1];
-
-    if (pieceToMove == null || pieceToMove.isWhite != isWhiteToMove) {
-      return moves;
-    }
-
-    // TODO: SUGGEST ALL LEGAL DELTAS MOVES
-    switch (pieceToMove.type) {
-
-      case TypePiece.king:
-
-        break;
-
-      case TypePiece.queen:
-
-        break;
-
-      case TypePiece.rook:
-
-        break;
-
-      case TypePiece.bishop:
-
-        break;
-
-      case TypePiece.knight:
-
-        break;
-
-      case TypePiece.pawn:
-
-        break;
-    }
-
-    var validMoves = moves.where((move) => isMoveValid(move)).toList();
-    return validMoves;
-  }
-
-
-  bool makeMove(Move move, {TypePiece typePiecePromotion}) {
-
-    // validate move
-    if (!isMoveValid(move)) {
-      return false;
-    }
-        
-    var isPromotion = isMovePromotion(move);
-    if (isPromotion && typePiecePromotion == null) {
-      return false;
-    }
-
-    // make move
-    var pieceToMove = pieces[move.square1];
-    if (isPromotion) {
-      pieceToMove.type = typePiecePromotion;
-    }
-    else {
-      // if castling move rook
-      if (isMoveCastling(move)) {
-        var columnInitialRook = move.square2.column - move.square1.column > 0 ? 8 : 1;
-        var squareInitialRook = Square(columnInitialRook, move.square1.row);
-        var columnFinalRook = (move.square1.column + move.square2.column) ~/ 2;
-        var squareFinalRook = Square(columnFinalRook, move.square1.row);
-        var pieceRook = pieces.remove(squareInitialRook);
-        pieces[squareFinalRook] = pieceRook;
-      }
-      // if en passant remove taken pawn
-      else if (isMoveEnPassant(move)) {
-        var squareOfCapture = Square(move.square2.column, move.square1.row);
-        pieces.remove(squareOfCapture);
-      }
-    }
-
-    // * UPDATE PIECES AFTER CHECKING isMoveCastling isMoveEnPassant AS THEY READ pieces
-    pieces.remove(move.square1);
-    pieces[move.square2] = pieceToMove;
-    moves.add(move);
-
-    // toggle isWhiteToMove
-    isWhiteToMove = !isWhiteToMove;
-
-    // TODO: update state of the game
-
-    return true;
-  }
-
-  // * DOES NOT VALIDATES MOVE
-  bool isMovePromotion(Move move) {
-    var piece = pieces[move.square1];
-    var isPiecePawn = piece.type == TypePiece.pawn;
-    var promotionRow = piece.isWhite ? 8 : 1;
-    var isSquareFinalPromotionRow = move.square2.row == promotionRow;
-    return isPiecePawn && isSquareFinalPromotionRow;
-  }
-
-  // * DOES NOT VALIDATES MOVE
-  bool isMoveCastling(Move move) {
-    var piece = pieces[move.square1];
-    var isColumnDelta2 = (move.square1.column - move.square2.column).abs() == 2;
-    return piece.type == TypePiece.king && isColumnDelta2;
-  }
-
-  // * DOES NOT VALIDATES MOVE
-  bool isMoveEnPassant(Move move) {
-    var piece = pieces[move.square1];
-    var pieceCapture = pieces[move.square2];
-    var isColumnDelta1 = (move.square1.column - move.square2.column).abs() == 1;
-    return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
-  }
-
-  bool canCastle({bool isWhite, bool isShort}) {
-    var pieceKing = getEntriesPiecesFiltered(TypePiece.king, isWhite).first.value;
-    var squareRook = Square(isShort ? 8 : 1, isWhite ? 1 : 8);
-    var pieceRook = pieces[squareRook];
-    if (pieceRook == null) {
-      return false;
-    }
-    for (Move m in moves) {
-      // if king or rook has moved return false
-      if (pieceKing.squareFirst == m.square1 || pieceRook.squareFirst == m.square1) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool canCaptureEnPassant(Move move) {
-    if (moves.isEmpty) {
-      return false;
-    }
-    var moveLast = moves[moves.length -1];
-    var pieceMoveLast = pieces[moveLast.square2];
-    if (pieceMoveLast == null) {
-      return false;
-    }
-    var isPieceMoveLastPawn = pieceMoveLast.type == TypePiece.pawn;
-    if (!isPieceMoveLastPawn) {
-      return false;
-    }
-    var isMoveLastDoublePawn = (moveLast.square1.row - moveLast.square2.row).abs() == 2;
-    if (!isMoveLastDoublePawn) {
-      return false;
-    }    
-    var arePiecesInSameRow = move.square1.row == moveLast.square2.row;
-    if (!arePiecesInSameRow) {
-      return false;
-    }
-    var willPiecesBeInSameColumn = moveLast.square1.column == move.square2.column;
-    if (!willPiecesBeInSameColumn) {
-      return false;
-    }
-    return true;
-  }
 }
