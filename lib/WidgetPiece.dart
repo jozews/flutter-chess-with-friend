@@ -7,7 +7,7 @@ class WidgetPiece {
 
   static Image withPiece(Piece piece) {
     var namePiece = piece.type.toString().replaceFirst("TypePiece.", "");
-    var nameIsLight = piece.isWhite ? "light" : "dark";
+    var nameIsLight = piece.isLight ? "light" : "dark";
     var name = "$namePiece-$nameIsLight";
     return Image.asset("sets/default/$name.png");
   }
