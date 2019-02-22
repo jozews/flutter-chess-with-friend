@@ -35,6 +35,8 @@ class Timer {
 
   var streamController = StreamController();
 
+  var stopped = false;
+
   var millisecondsTickPrecision = 10;
 
   double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
@@ -62,8 +64,8 @@ class Timer {
         var timeUpdatedMaxed = max(0.0, timeUpdated);
         setTime(isLightTicking, timeUpdatedMaxed);
         streamController.add(timeUpdatedMaxed);
-        if (timeUpdatedMaxed == 0.0) {
-          streamController.close();
+        if (stopped || timeUpdatedMaxed == 0.0) {
+          stop();
           break;
         }
       }
@@ -91,8 +93,14 @@ class Timer {
     timestampStart = null;
   }
 
-  Stream startTicking() {
+  Stream start() {
+    stopped = false;
     tick();
     return streamController.stream;
+  }
+
+  stop() {
+    stopped = true;
+    streamController.close();
   }
 }
