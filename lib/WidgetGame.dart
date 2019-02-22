@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue/flutter_blue.dart';
 
 import 'Color.dart';
 import 'Game.dart';
@@ -27,15 +28,17 @@ class WidgetGameState extends State<WidgetGame> {
 
   Game game;
   Timer timer;
+  FlutterBlue flutterBlue;
 
-  double timeTotalLight;
-  double timeTotalDark;
+  var timeTotalLight = 600.0;
+  var timeTotalDark = 600.0;
 
   var isLightOrientation = true;
   
   Map<Piece, Offset> offsets = {};
 
   Square squareSelected;
+  Square squareCheck;
   List<Square> squaresValid = [];
 
   Move moveLast;
@@ -48,6 +51,7 @@ class WidgetGameState extends State<WidgetGame> {
     super.initState();
     SystemChrome.setEnabledSystemUIOverlays([]);
     startGame();
+//    startScanning();
   }
 
   Offset offsetFromSquare(Square square) {
@@ -62,12 +66,21 @@ class WidgetGameState extends State<WidgetGame> {
     return Square(column, row);
   }
 
+  startScanning() {
+    flutterBlue = FlutterBlue.instance;
+    flutterBlue.scan().listen((scanResult) {
+      print(scanResult.device.name);
+      print(scanResult.device.type);
+    });
+  }
+
+
   startGame() async {
 
     await Future.delayed(Duration(seconds: 1));
 
     game = Game.standard();
-    timer = Timer(timeTotal: 120);
+    timer = Timer(timeTotal: 600.0);
 
     var offsets = Map.fromIterable(game.board.entries, key: (entry) => entry.value as Piece, value: (entry) {
       var square = entry.key;
@@ -84,13 +97,6 @@ class WidgetGameState extends State<WidgetGame> {
       this.timeTotalDark = timer.timeTotal;
     });
 
-    timer.addTimestampStart();
-    timer.startTicking().listen((time) {
-      setState(() {
-        this.timeTotalLight = timer.timeLight;
-        this.timeTotalDark = timer.timeDark;
-      });
-    });
   }
 
   @override
@@ -202,7 +208,8 @@ class WidgetGameState extends State<WidgetGame> {
                           !isLightOrientation ? formatInterval(timeTotalLight) : formatInterval(timeTotalDark),
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: SIZE_TIME
+                              fontSize: SIZE_TIME,
+                              fontWeight: FontWeight.w500
                           ),
                         ),
                         margin: EdgeInsets.only(
@@ -216,8 +223,9 @@ class WidgetGameState extends State<WidgetGame> {
                         child: Text(
                           isLightOrientation ? formatInterval(timeTotalLight) : formatInterval(timeTotalDark),
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: SIZE_TIME
+                            color: Colors.white,
+                            fontSize: SIZE_TIME,
+                            fontWeight: FontWeight.w500
                           ),
                         ),
                         margin: EdgeInsets.only(
@@ -238,12 +246,24 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   makeMove(Move move) {
-    // update keyboard
+
     var isValid = game.makeMove(move);
+
     if (isValid) {
       timer.addTimestampEnd();
       timer.addTimestampStart();
+      // start game
+      if (game.moves.length == 1) {
+        timer.addTimestampStart();
+        timer.startTicking().listen((time) {
+          setState(() {
+            this.timeTotalLight = timer.timeLight;
+            this.timeTotalDark = timer.timeDark;
+          });
+        });
+      }
     }
+
     Map<Piece, Offset> offsetsUpdated = {};
     offsets.entries.forEach((entry) {
       var piece = entry.key;

@@ -146,20 +146,22 @@ bool isDeltaValidForKnightMove(Move move) {
   return (difsColumns.abs() == 2 && diffRows.abs() == 1) || (difsColumns.abs() == 1 && diffRows.abs() == 2);
 }
 
-bool isDeltaValidForPawnMove(Move move, {bool isLight, bool isCapture, Square squareEnPassant}) {
-  var difsColumns = move.square2.column - move.square1.column;
+bool isDeltaValidForPawnMove(Move move, {bool isLight, bool isCapture}) {
+  var diffsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
   var direction = isLight ? 1 : -1;
-  if (squareEnPassant != null) {
-    return difsColumns == 0 && diffRows == 1*direction;
-  }
   if (isCapture) {
-    return difsColumns.abs() == 1 && diffRows == 1*direction;
+    return diffsColumns.abs() == 1 && diffRows == 1*direction;
   }
-  return difsColumns == 0 && (diffRows == 1*direction || diffRows == 2*direction); 
+  return diffsColumns == 0 && (diffRows == 1*direction || diffRows == 2*direction);
 }
 
-bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bool isCapture, Square squareEnPassant}) {
+bool isDeltaValidForCaptureEnPassant(Square square2, Square squareEnPassant, {bool isLight}) {
+  var direction = isLight ? 1 : -1;
+  return square2.column - squareEnPassant.column == 0 && (square2.row - squareEnPassant.row) == 1*direction;
+}
+
+bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bool isCapture}) {
 
       switch (piece.type) {
 
@@ -179,7 +181,7 @@ bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bo
         return isDeltaValidForKnightMove(move);
 
       case TypePiece.pawn:
-        return isDeltaValidForPawnMove(move, isLight: piece.isLight, isCapture: isCapture, squareEnPassant: squareEnPassant);
+        return isDeltaValidForPawnMove(move, isLight: piece.isLight, isCapture: isCapture);
     }
 
     throw Exception("Non exhaustive switch");
@@ -380,7 +382,11 @@ class Game {
 
     var squareLastSquaresToKingReversed = squaresToKingReversed.last;
     var pieceLastSquaresToKingReversed = board[squareLastSquaresToKingReversed];
-    if (pieceLastSquaresToKingReversed == null || pieceLastSquaresToKing.isLight != !piece.isLight) {
+    if (pieceLastSquaresToKingReversed == null) {
+      return null;
+    }
+
+    if (pieceLastSquaresToKingReversed.isLight == piece.isLight) {
       return null;
     }
 
@@ -560,8 +566,7 @@ class Game {
           }
           else if (captureEnPassant != null) {
             var squareEnPassant = squareOfPiece(captureEnPassant);
-            var isValid = isDeltaValidForPawnMove(move, isLight:pieceToMove.isLight, squareEnPassant: squareEnPassant);
-            if (!isValid) {
+            if (!isDeltaValidForCaptureEnPassant(move.square2, squareEnPassant, isLight:pieceToMove.isLight)) {
               return false;
             }
           }
