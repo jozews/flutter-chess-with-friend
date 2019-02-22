@@ -1,6 +1,6 @@
 
 import 'dart:async';
-
+import 'dart:math';
 
 class MoveTimer {
 
@@ -25,11 +25,13 @@ class Timer {
     timeDark = timeTotal;
   }
 
+  double timestampStart;
+  double timeOnStart;
+
   double timeLight;
   double timeDark;
 
   List<MoveTimer> moves = [];
-  double timestampStart;
 
   var streamController = StreamController();
 
@@ -37,8 +39,7 @@ class Timer {
 
   double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
   bool get isLightTicking => moves.length % 2 == 0;
-  double get timeOfTicking => isLightTicking ? timeLight : timeDark;
-
+  double get timeOfTicking => getTime(isLightTicking);
 
   getTime(bool isLight) {
     return isLight ? timeLight : timeDark;
@@ -57,26 +58,36 @@ class Timer {
     while (true) {
       await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
       if (timestampStart != null) {
-        setTime(isLightTicking, (timestampNow - timestampStart));
-        streamController.add(true);
+        var timeUpdated = timeOnStart - (timestampNow - timestampStart);
+        var timeUpdatedMaxed = max(0.0, timeUpdated);
+        setTime(isLightTicking, timeUpdatedMaxed);
+        streamController.add(timeUpdatedMaxed);
+        if (timeUpdatedMaxed == 0.0) {
+          streamController.close();
+          break;
+        }
       }
     }
   }
 
   addTimestampStart({double timestamp}) {
-    timestampStart = timestamp ?? timestampNow;
     // increment
-    var timeIncremented = getTime(isLightTicking) + incrementOnStart;
+    var timeIncremented = timeOfTicking + incrementOnStart;
     setTime(isLightTicking, timeIncremented);
+    // tick
+    timestampStart = timestamp ?? timestampNow;
+    timeOnStart = timeOfTicking;
   }
 
   addTimestampEnd({double timestamp}) {
-    // increment
-    var timeIncremented = getTime(isLightTicking) + incrementOnEnd;
+    var timestampEnd = timestamp ?? timestampNow;
+    // update
+    var timeIncremented = timeOfTicking + incrementOnEnd;
     setTime(isLightTicking, timeIncremented);
     // add move
-    var move = MoveTimer(timestampStart, timestamp ?? timestampNow);
+    var move = MoveTimer(timestampStart, timestampEnd);
     moves.add(move);
+    // stop tick
     timestampStart = null;
   }
 
