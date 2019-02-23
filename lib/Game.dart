@@ -678,45 +678,39 @@ class Game {
     return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
   }
 
-  bool makeMove(Move move, {TypePiece typePiecePromotion}) {
+  String makeMove(Move move) {
 
     // validate move
     if (!isMoveValid(move)) {
-      return false;
+      return null;
     }
-        
-    var isPromotion = isMovePromotion(move);
-    if (isPromotion && typePiecePromotion == null) {
-      print("PROMOTE PIECE REQUIRED");
-      return false;
-    }
+
+    var movePNG = "";
 
     // make move
     var pieceToMove = board[move.square1];
-    if (isPromotion) {
-      pieceToMove.type = typePiecePromotion;
+
+    // if castling move rook
+    if (isMoveCastling(move)) {
+      var columnInitialRook = move.square2.column - move.square1.column > 0 ? 8 : 1;
+      var squareInitialRook = Square(columnInitialRook, move.square1.row);
+      var columnFinalRook = (move.square1.column + move.square2.column) ~/ 2;
+      var squareFinalRook = Square(columnFinalRook, move.square1.row);
+      var pieceRook = board.remove(squareInitialRook);
+      board[squareFinalRook] = pieceRook;
     }
-    else {
-      // if castling move rook
-      if (isMoveCastling(move)) {
-        var columnInitialRook = move.square2.column - move.square1.column > 0 ? 8 : 1;
-        var squareInitialRook = Square(columnInitialRook, move.square1.row);
-        var columnFinalRook = (move.square1.column + move.square2.column) ~/ 2;
-        var squareFinalRook = Square(columnFinalRook, move.square1.row);
-        var pieceRook = board.remove(squareInitialRook);
-        board[squareFinalRook] = pieceRook;
-      }
-      // if en passant remove taken pawn
-      else if (isMoveEnPassant(move)) {
-        var squareOfCapture = Square(move.square2.column, move.square1.row);
-        board.remove(squareOfCapture);
-      }
+    // if en passant remove taken pawn
+    else if (isMoveEnPassant(move)) {
+      var squareOfCapture = Square(move.square2.column, move.square1.row);
+      board.remove(squareOfCapture);
     }
 
     // * update board after checking isMoveCastling isMoveEnPassant as they read the board
     board.remove(move.square1);
     board[move.square2] = pieceToMove;
     moves.add(move);
+
+    var isPromotion = isMovePromotion(move);
 
     // toggle isLightToMove
     isLightToMove = !isLightToMove;
@@ -741,12 +735,10 @@ class Game {
         state = StateGame.ongoing;
       }
     }
-    
-    return true;
   }
 
 
-  bool makeMovePNG(String movePNG) {
+  String makeMovePNG(String movePNG) {
 
     if (movePNG == "") {
       print("");
