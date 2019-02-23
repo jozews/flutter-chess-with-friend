@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
-import 'Color.dart';
 import 'Game.dart';
 import 'Timer.dart';
+import 'Defaults.dart';
 
 import 'ScrollBehavior.dart';
 import 'WidgetPiece.dart';
@@ -21,8 +21,8 @@ class WidgetGame extends StatefulWidget {
 
 class WidgetGameState extends State<WidgetGame> {
 
-  static const COLOR_BACKGROUND_1 = Colors.white;
-  static const COLOR_BACKGROUND_2 = Colors.black87;
+  static var COLOR_BACKGROUND_1 = Colors.black.withAlpha((0.8*255).toInt());
+  static const COLOR_BACKGROUND_2 = Colors.white;
   static const SIZE_TIME = 26.0;
   static const MARGIN_EDGE_TIME = 12.0;
 
@@ -30,13 +30,16 @@ class WidgetGameState extends State<WidgetGame> {
   Timer timer;
   FlutterBlue flutterBlue;
 
-  var timeTotalLight = 600.0;
-  var timeTotalDark = 600.0;
+  Color colorBoard = Colors.blueGrey;
+
+  double timeTotalLight;
+  double timeTotalDark;
 
   var isLightOrientation = true;
   var showsAlert = false;
 
   Map<Piece, Offset> offsets = {};
+  Map<Piece, Offset> offsetsPanning = {};
 
   Square squareSelected;
   Square squareCheck;
@@ -46,14 +49,6 @@ class WidgetGameState extends State<WidgetGame> {
   Move movePre;
 
   get heightSquare => MediaQuery.of(context).size.height/8;
-
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setEnabledSystemUIOverlays([]);
-    startGame();
-//    startScanning();
-  }
 
   Offset offsetFromSquare(Square square) {
     var dx = (square.column - 1.0)*heightSquare;
@@ -66,7 +61,25 @@ class WidgetGameState extends State<WidgetGame> {
     var row = -1*(1.0 + offset.dy/heightSquare - 9.0).round();
     return Square(column, row);
   }
+  
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setEnabledSystemUIOverlays([]);
+    startGame();
+    getDefaultColorBoard();
+//    startScanning();
+  }
 
+  getDefaultColorBoard() async {
+    var hexColor = await Defaults.getInt(Defaults.COLOR);
+    if (hexColor != null) {
+      setState(() {
+        colorBoard = Color(hexColor);
+      });
+    }
+  }
+  
   startScanning() {
     flutterBlue = FlutterBlue.instance;
     flutterBlue.scan().listen((scanResult) {
@@ -110,7 +123,7 @@ class WidgetGameState extends State<WidgetGame> {
               children: <Widget>[
                 Expanded(
                   child: Container(
-                    color: COLOR_BACKGROUND_2,
+                    color: COLOR_BACKGROUND_1,
                   ),
                 ),
                 AspectRatio(
@@ -120,31 +133,87 @@ class WidgetGameState extends State<WidgetGame> {
                       behavior: ScrollBehaviorClean(),
                       child: Stack(
                         children: <Widget>[
-                          GridView.count(
-                            scrollDirection: Axis.horizontal,
-                            crossAxisCount: 8,
-                            children: List.generate(64, (index) {
-                              var column = index ~/ 8;
-                              var row = 7 - (index % 8);
-                              var square = Square(column + 1, row + 1);
-                              var color = (index % 2) != (column % 2) ? Color.dark : Color.light;
-                              return GestureDetector(
-                                child: Container(
-                                    color: color
-                                ),
-                                onTapUp: (tap) {
-                                  var move = Move(squareSelected, square);
-                                  if (square != squareSelected) {
-                                    makeMove(move);
-                                    setState(() {
-                                      squareSelected = null;
-                                    });
-                                  }
-                                },
-                              );
-                            }),
+                          Container(
+                            child: GridView.count(
+                              scrollDirection: Axis.horizontal,
+                              crossAxisCount: 8,
+                              children: List.generate(64, (index) {
+                                var column = index ~/ 8;
+                                var row = 7 - (index % 8);
+                                var square = Square(column + 1, row + 1);
+                                var color = (index % 2) != (column % 2) ? colorBoard : colorBoard.withAlpha((0.4*255).toInt());
+                                return GestureDetector(
+                                  child: Container(
+                                      color: color
+                                  ),
+                                  onTapUp: (tap) {
+                                    var move = Move(squareSelected, square);
+                                    if (square != squareSelected) {
+                                      makeMove(move);
+                                      setState(() {
+                                        squareSelected = null;
+                                      });
+                                    }
+                                  },
+                                );
+                              }),
+                            ),
+                            color: Colors.white,
                           )
                         ] + offsets.entries.map<Widget>((entry) {
+                          var piece = entry.key;
+                          return Positioned(
+                            left: offsets[entry.key].dx,
+                            top: offsets[entry.key].dy,
+                            child: GestureDetector(
+                              onTapDown: (tap) {
+                                var square = game.squareOfPiece(piece);
+                                if (squareSelected == null) {
+                                  setState(() {
+                                    squareSelected = square;
+                                  });
+                                }
+                                else {
+                                  // hint new move
+                                }
+                              },
+                              onTapUp: (tap) {
+                                var square = game.squareOfPiece(piece);
+                                var move = Move(squareSelected, square);
+                                if (square != squareSelected) {
+                                  makeMove(move);
+                                  setState(() {
+                                    squareSelected = null;
+                                  });
+                                }
+                              },
+                              onPanStart: (pan) {
+                                setState(() {
+                                  var offsetRemoved = offsets.remove(piece);
+                                  offsetsPanning[piece] = offsetRemoved;
+                                });
+                              },
+                              onPanUpdate: (pan) {
+                                var offset = Offset(offsets[piece].dx + pan.delta.dx, offsets[piece].dy + pan.delta.dy);
+                                setState(() {
+                                  offsets[piece] = offset;
+                                });
+                              },
+                              onPanEnd: (pan) {
+                                var offset = offsets[piece];
+                                var square1 = game.squareOfPiece(piece);
+                                var square2 = squareFromOffset(offset);
+                                var move = Move(square1, square2);
+                                makeMove(move);
+                              },
+                              child: Container(
+                                child: WidgetPiece.withPiece(piece),
+                                height: heightSquare*1,
+                                width: heightSquare*1,
+                              ),
+                            ),
+                          );
+                        }).toList() + offsetsPanning.entries.map<Widget>((entry) {
                           var piece = entry.key;
                           return Positioned(
                             left: offsets[entry.key].dx,
@@ -186,6 +255,10 @@ class WidgetGameState extends State<WidgetGame> {
                                 var square2 = squareFromOffset(offset);
                                 var move = Move(square1, square2);
                                 makeMove(move);
+                                setState(() {
+                                  var offsetRemoved = offsetsPanning.remove(piece);
+                                  offsets[piece] = offsetRemoved;
+                                });
                               },
                               child: Container(
                                 child: WidgetPiece.withPiece(piece),
@@ -201,10 +274,10 @@ class WidgetGameState extends State<WidgetGame> {
                 ),
                 Expanded(
                   child: Container(
-                    color: COLOR_BACKGROUND_2,
+                    color: COLOR_BACKGROUND_1,
                     child: Stack(
                       children: <Widget>[
-                        Align(
+                        timeTotalLight != null ? Align(
                           alignment: Alignment.topCenter,
                           child: Container(
                             child: Text(
@@ -219,8 +292,8 @@ class WidgetGameState extends State<WidgetGame> {
                                 top: MARGIN_EDGE_TIME
                             ),
                           ),
-                        ),
-                        Align(
+                        ) : Container(),
+                        timeTotalLight != null ? Align(
                           alignment: Alignment.bottomCenter,
                           child: Container(
                             child: Text(
@@ -235,7 +308,7 @@ class WidgetGameState extends State<WidgetGame> {
                                 bottom: MARGIN_EDGE_TIME
                             ),
                           ),
-                        )
+                        ) : Container()
                       ],
                     ),
                   ),
@@ -243,18 +316,18 @@ class WidgetGameState extends State<WidgetGame> {
               ],
               mainAxisAlignment: MainAxisAlignment.center,
             ),
-            color: COLOR_BACKGROUND_1,
+            color: COLOR_BACKGROUND_2,
           ),
-          GestureDetector(
+          showsAlert ? GestureDetector(
             child: Container(
-              color: showsAlert ? Colors.black45 : Colors.transparent,
+              color: Colors.black45,
             ),
             onTap: () {
               setState(() {
                 showsAlert = false;
               });
             },
-          ),
+          ) : Container(),
           showsAlert ? Center(
             child: ClipRRect(
               borderRadius: BorderRadius.only(
@@ -330,10 +403,10 @@ class WidgetGameState extends State<WidgetGame> {
       return "Stalemate";
     }
     if (timer.timeLight == 0) {
-      return "Time us up";
+      return "Time over";
     }
     if (timer.timeDark == 0) {
-      return "Time us up";
+      return "Time over";
     }
     return "";
   }
