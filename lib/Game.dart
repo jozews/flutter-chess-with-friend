@@ -2,6 +2,7 @@
 import 'dart:core';
 import 'package:quiver/core.dart';
 
+
 Map<Square, Piece> piecesStandard() {
     
   var pieces = Map<Square, Piece>();
@@ -206,6 +207,15 @@ class Piece {
 
   bool operator ==(o) => o is Piece && o.squareFirst == squareFirst;
   int get hashCode => squareFirst.hashCode;
+
+  String get codePNG {
+    return type == TypePiece.king ? "K" 
+        : type == TypePiece.queen ? "Q" 
+        : type == TypePiece.bishop ? "B" 
+        : type == TypePiece.knight ? "N" 
+        : type == TypePiece.rook ? "R" 
+        : "";
+  }
 }
 
 enum StateGame {
@@ -229,6 +239,9 @@ class Square {
   bool get inBounds => column >= 1 && column <= 8 && row >= 1 && row <= 8;
   bool operator ==(o) => o is Square && o.column == column && o.row == row;
   int get hashCode => hash2(column.hashCode, row.hashCode);
+  
+  String get codePNG => codePNGColumn + row.toString();
+  String get codePNGColumn => "_abcdefgh".split("")[column];
 }
 
 
@@ -261,7 +274,7 @@ class Game {
   }
 
 
-  List<MapEntry<Square, Piece>> getEntriesPiecesFiltered(TypePiece type, bool isLight) {
+  List<MapEntry<Square, Piece>> getEntriesFiltered(TypePiece type, bool isLight) {
     return board.entries.where((entry) {
       var piece = entry.value;
       if ((type == null || piece.type == type) && (isLight == null || piece.isLight == isLight)) {
@@ -363,7 +376,7 @@ class Game {
   List<Square> getPin(Piece piece) {
 
     var squarePiece = squareOfPiece(piece);
-    var squareKing = getEntriesPiecesFiltered(TypePiece.king, piece.isLight).first.key;
+    var squareKing = getEntriesFiltered(TypePiece.king, piece.isLight).first.key;
 
     var moveToKing = Move(squarePiece, squareKing);
     var deltaToKing = deltaReducedFromMove(moveToKing);
@@ -459,9 +472,9 @@ class Game {
       return false;
     }
         
-    var entriesKingToMove = getEntriesPiecesFiltered(TypePiece.king, isLightToMove);
+    var kingToMove = getEntriesFiltered(TypePiece.king, isLightToMove).first.value;
 
-    var checks = getChecks(entriesKingToMove.first.value);
+    var checks = getChecks(kingToMove);
 
     // king must step out of double check
     if (checks.length == 2 && pieceToMove.type != TypePiece.king) {
@@ -560,11 +573,11 @@ class Game {
           }
         }
         else if (isDeltaValidForPawnMove(move, isLight: pieceToMove.isLight, isCapture: true)) {
-          var captureEnPassant = canCaptureEnPassant();
-          if (pieceAtSquare2 != null) {
-            //pass
-          }
-          else if (captureEnPassant != null) {
+          if (pieceAtSquare2 == null) {
+            var captureEnPassant = canCaptureEnPassant();
+            if (captureEnPassant == null) {
+              return false;
+            }
             var squareEnPassant = squareOfPiece(captureEnPassant);
             if (!isDeltaValidForCaptureEnPassant(move.square2, squareEnPassant, isLight:pieceToMove.isLight)) {
               return false;
@@ -685,10 +698,16 @@ class Game {
       return null;
     }
 
-    var movePNG = "";
-
-    // make move
     var pieceToMove = board[move.square1];
+
+    // for png
+    var entriesOtherWithValidSquare2 = getEntriesFiltered(pieceToMove.type, pieceToMove.isLight)
+        .where((entryPiece) => entryPiece.value != pieceToMove)
+        .where((entryPiece) => isMoveValid(Move(entryPiece.key, move.square2))).toList();
+
+    if (isMovePromotion(move)) {
+      pieceToMove.type = TypePiece.queen;
+    }
 
     // if castling move rook
     if (isMoveCastling(move)) {
@@ -707,16 +726,15 @@ class Game {
 
     // * update board after checking isMoveCastling isMoveEnPassant as they read the board
     board.remove(move.square1);
+    var pieceTaken = board[move.square2];
     board[move.square2] = pieceToMove;
     moves.add(move);
-
-    var isPromotion = isMovePromotion(move);
 
     // toggle isLightToMove
     isLightToMove = !isLightToMove;
     
-    var entryKingToMove = getEntriesPiecesFiltered(TypePiece.king, isLightToMove).first;
-    var entriesPiecesToMove = getEntriesPiecesFiltered(null, isLightToMove);
+    var entryKingToMove = getEntriesFiltered(TypePiece.king, isLightToMove).first;
+    var entriesPiecesToMove = getEntriesFiltered(null, isLightToMove);
     var checks = getChecks(entryKingToMove.value);
 
     var areThereValidMoves = false;
@@ -729,12 +747,30 @@ class Game {
 
     if (!areThereValidMoves) {
       if (checks.isNotEmpty) {
-        state = isLightToMove ? StateGame.checkmateByBlack :StateGame.checkmateByLight;
+        state = isLightToMove ? StateGame.checkmateByBlack : StateGame.checkmateByLight;
       }
       else {
         state = StateGame.ongoing;
       }
     }
+
+    var codePiece = pieceToMove.codePNG;
+    var codeDisambiguation = "";
+    if (pieceToMove.type == TypePiece.pawn && pieceTaken != null) {
+      codeDisambiguation = move.square1.codePNGColumn;
+    }
+    if (entriesOtherWithValidSquare2.isNotEmpty) {
+      var setSquare1 = move.square1.codePNG.split("").toSet();
+      var setSquare1Other = entriesOtherWithValidSquare2.first.key.codePNG.split("").toSet();
+      var intersection = setSquare1Other.intersection(setSquare1);
+      codeDisambiguation = setSquare1.difference(intersection).first;
+    }
+    var codeCapture = pieceTaken != null ? "x" : "";
+    var codeSquare = move.square2.codePNG;
+    var codeEnd = state == StateGame.checkmateByBlack || state == StateGame.checkmateByLight ? "#" : checks.isNotEmpty ? "+" : "";
+    var movePNG = "$codePiece$codeDisambiguation$codeCapture$codeSquare$codeEnd";
+
+    return movePNG;
   }
 
 
@@ -776,36 +812,34 @@ class Game {
 
       // get square initial
       // ...
-
-      // get column and row inital
-      var entryPieces = getEntriesPiecesFiltered(typePiece, isLightToMove);
-      if (entryPieces.isEmpty) {
-        print(entryPieces);
+      var entries = getEntriesFiltered(typePiece, isLightToMove);
+      if (entries.isEmpty) {
+        print(entries);
         throw Exception("Invalid PNG move");
       }
-      if (entryPieces.length > 1) {
+      if (entries.length > 1) {
         int columnInitial = columns[0] != columnFinal ? columns[0] : null;
         if (columnInitial != null) {
-          entryPieces = entryPieces.where((entryPiece) => entryPiece.key.column == columnInitial).toList();
+          entries = entries.where((entryPiece) => entryPiece.key.column == columnInitial).toList();
         }
         int rowInitial = rows[0] != rowFinal ? rows[0] : null;
         if (rowInitial != null) {
-          entryPieces = entryPieces.where((entryPiece) => entryPiece.key.row == rowInitial).toList();
+          entries = entries.where((entryPiece) => entryPiece.key.row == rowInitial).toList();
         }
       }
-      if (entryPieces.length > 1) {
-        entryPieces = entryPieces.where((entryPiece) => isMoveValid(Move(entryPiece.key, squareFinal))).toList();
+      if (entries.length > 1) {
+        entries = entries.where((entryPiece) => isMoveValid(Move(entryPiece.key, squareFinal))).toList();
       }
-      if (entryPieces.length > 1) {
-        print(entryPieces);
+      if (entries.length > 1) {
+        print(entries);
         throw Exception("Ambiguous PNG move");
       }
-      squareInitial = entryPieces.first.key;
+      squareInitial = entries.first.key;
     }
     
     // castle
     else {
-      var entryKing = getEntriesPiecesFiltered(TypePiece.king, isLightToMove).first;
+      var entryKing = getEntriesFiltered(TypePiece.king, isLightToMove).first;
       squareInitial = entryKing.key;
       var deltaColumns = isShortCastle ? 2 : -2;
       squareFinal = Square(squareInitial.column + deltaColumns, squareInitial.row);
@@ -814,6 +848,4 @@ class Game {
     var move = Move(squareInitial, squareFinal);
     return makeMove(move);
   }
-
-
 }

@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Defaults {
 
-  static const COLOR = "color";
+  static const INDEX_ACCENT = "color";
 
   // GET
   // ..
