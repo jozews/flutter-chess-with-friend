@@ -8,7 +8,7 @@ import 'Timer.dart';
 import 'Defaults.dart';
 
 import 'ScrollBehavior.dart';
-import 'WidgetPiece.dart';
+
 
 class WidgetGame extends StatefulWidget {
   WidgetGame({Key key}) : super(key: key);
@@ -17,11 +17,12 @@ class WidgetGame extends StatefulWidget {
   WidgetGameState createState() => WidgetGameState();
 }
 
+
 class WidgetGameState extends State<WidgetGame> {
   static const RADIUS_PNG = 5.0;
   static const RADIUS_ALERT = 5.0;
 
-  static const SIZE_PNG = 20.0;
+  static const SIZE_PNG = 18.0;
   static const SIZE_TIME = 26.0;
 
   static const INSET_TIME_VERTICAL = 12.0;
@@ -43,14 +44,17 @@ class WidgetGameState extends State<WidgetGame> {
 
   // BOARD
   // ...
-  List<Map<Square, Piece>> listPositions;
+  List<Map<Square, Piece>> positions;
   int indexPosition;
   Map<Piece, Offset> offsets;
+  Piece piecePanning;
 
-  Square squareSelected;
-  Square squareCheck;
+  List<Square> squaresSelected;
   List<Square> squaresValid;
   Move moveLast;
+
+  // NOTE: not implemented
+  Square squareCheck;
   Move movePre;
 
   // TIME
@@ -78,6 +82,7 @@ class WidgetGameState extends State<WidgetGame> {
 
   // UTIL
   // ...
+  get heightSquare => min(MediaQuery.of(context).size.height, MediaQuery.of(context).size.width) / 8;
 
   // STATE
   // ...
@@ -99,9 +104,9 @@ class WidgetGameState extends State<WidgetGame> {
           Container(
             child: Row(
               children: <Widget>[
-                widgetLeft(),
+                widgetSide(),
                 colorBoard != null ? widgetCenter() : Container(),
-                widgetRight(),
+                widgetSide(isLeft: false),
               ],
               mainAxisAlignment: MainAxisAlignment.center,
             ),
@@ -124,8 +129,10 @@ class WidgetGameState extends State<WidgetGame> {
         child: ScrollConfiguration(
           behavior: ScrollBehaviorClean(),
           child: Stack(
-            children: [widgetBoard()]
-                + (squareSelected != null ? [widgetSquareSelection(squareSelected)] : [])
+            children: [ widgetBoard() ] 
+                + (squaresSelected ?? []).map<Widget>((square) {
+                  return widgetSquareSelected(square);
+                }).toList()
                 + (moveLast != null ? [widgetSquareLast(moveLast.square1), widgetSquareLast(moveLast.square2)] : [])
                 + (offsets != null ? offsets.entries.map<Widget>((entry) {
                         var piece = entry.key;
@@ -141,177 +148,211 @@ class WidgetGameState extends State<WidgetGame> {
     );
   }
 
-  Widget widgetLeft() {
+  Widget widgetSide({bool isLeft = true}) {
     return Expanded(
       child: Container(
         color: colorBackground1,
-        child: Column(
+        child: Stack(
           children: <Widget>[
-                timeTotalLight != null
-                    ? Center(
-                        child: Container(
-                          child: Text(
-                            isLightOrientation
-                                ? getFormattedInterval(timeTotalLight)
-                                : getFormattedInterval(timeTotalDark),
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: SIZE_TIME,
-                                fontWeight: FontWeight.w500),
-                          ),
-                          margin: EdgeInsets.symmetric(
-                              vertical: INSET_TIME_VERTICAL),
-                        ),
-                      )
-                    : Container()
-              ] +
-              (codesMoves ?? [])
-                  .asMap()
-                  .entries
-                  .where(
-                      (entry) => entry.key % 2 == (isLightOrientation ? 0 : 1))
-                  .map<Widget>((entry) {
-                var code = entry.value;
-                var index = entry.key;
-                return widgetCode(code, index);
-              }).toList(),
-          verticalDirection: VerticalDirection.up,
+                timeTotalLight != null ? Align(
+                  alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+                  child: Container(
+                    child: Text(
+                      isLeft ? (isLightOrientation
+                          ? getFormattedInterval(timeTotalLight)
+                          : getFormattedInterval(timeTotalDark))
+                          : (!isLightOrientation ? getFormattedInterval(timeTotalLight)
+                          : getFormattedInterval(timeTotalDark)),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: SIZE_TIME,
+                          fontWeight: FontWeight.w500),
+                    ),
+                    margin: EdgeInsets.symmetric(
+                        vertical: INSET_TIME_VERTICAL),
+                  ),
+                ) : Container(),
+                Align(
+                  alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+                  child: ListView(
+                    children: (codesMoves ?? []).asMap().entries.where((entry) {
+                      return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
+                          : entry.key % 2 == (!isLightOrientation ? 0 : 1);
+                    }).map<Widget>((entry) {
+                      var code = entry.value;
+                      var index = entry.key;
+                      return widgetCode(code, index);
+                    }).toList(),
+                    reverse: isLeft,
+                    padding: EdgeInsets.only(
+                      top: !isLeft ? 45.0 : 0.0,
+                      bottom: isLeft ? 45.0 : 0.0,
+                    ),
+                  ),
+                )
+              ],
         ),
-      ),
-    );
-  }
-
-  Widget widgetRight() {
-    return Expanded(
-      child: Container(
-        color: colorBackground1,
-        child: Column(
-            children: [
-                  timeTotalLight != null
-                      ? Center(
-                          child: Container(
-                            child: Text(
-                              !isLightOrientation
-                                  ? getFormattedInterval(timeTotalLight)
-                                  : getFormattedInterval(timeTotalDark),
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: SIZE_TIME,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                            margin: EdgeInsets.symmetric(
-                                vertical: INSET_TIME_VERTICAL),
-                          ),
-                        )
-                      : Container()
-                ] +
-                (codesMoves ?? [])
-                    .asMap()
-                    .entries
-                    .where((entry) =>
-                        entry.key % 2 == (!isLightOrientation ? 0 : 1))
-                    .map<Widget>((entry) {
-                  var code = entry.value;
-                  var index = entry.key;
-                  return widgetCode(code, index);
-                }).toList()),
       ),
     );
   }
 
   Widget widgetBoard() {
     return Container(
-      child: GridView.count(
-        scrollDirection: Axis.horizontal,
-        crossAxisCount: 8,
-        children: List.generate(64, (index) {
-          var column = index ~/ 8;
-          var row = 7 - (index % 8);
-          var square = Square(column + 1, row + 1);
-          var color =
-              (index % 2) != (column % 2) ? colorBoardDark : colorBoardLight;
-          return GestureDetector(
-            child: Container(color: color),
-            onTapUp: (tap) {
-              var move = Move(squareSelected, square);
-              if (square != squareSelected) {
-                makeMove(move);
+      child: GestureDetector(
+          child: GridView.count(
+            scrollDirection: Axis.horizontal,
+            crossAxisCount: 8,
+            children: List.generate(64, (index) {
+              var column = index ~/ 8;
+//              var row = 7 - (index % 8);
+//              var square = Square(column + 1, row + 1);
+              var color = (index % 2) != (column % 2) ? colorBoardDark : colorBoardLight;
+              return Container(
+                  color: color
+              );
+            }),
+          ),
+          onTapCancel: () {
+
+          },
+          onTapDown: (tap) {
+            var offset = offsetFromGlobalPosition(tap.globalPosition);
+            var square = squareFromOffset(offset);
+            var piece = positions.last[square];
+            if (squaresSelected.isEmpty && piece != null) {
+              var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
+              setState(() {
+                squaresSelected = [square];
+                this.squaresValid = squaresValid;
+              });
+            }
+            else if (squaresSelected.isNotEmpty) {
+              var isSquareValid = squaresValid.contains(square);
+              if (isSquareValid) {
                 setState(() {
-                  squareSelected = null;
+                  squaresSelected.add(square);
+                });
+              }
+              else if (piece != null) {
+                var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
+                setState(() {
+                  squaresSelected = [square];
+                  this.squaresValid = squaresValid;
+                });
+              }
+              else {
+                setState(() {
+                  squaresSelected = [];
                   squaresValid = [];
                 });
               }
-            },
-          );
-        }),
+            }
+          },
+          onTapUp: (tap) {
+            if (squaresSelected.length == 2) {
+              var move = Move(squaresSelected.first, squaresSelected.last);
+              var _ = makeMove(move);
+              if (_ != null) {
+                setState(() {
+                  squaresSelected = [];
+                  squaresValid = [];
+                });
+              }
+            }
+          },
+          onPanStart: (pan) {
+            var offset = offsetFromGlobalPosition(pan.globalPosition);
+            var square = squareFromOffset(offset);
+            if (squaresSelected.isEmpty) {
+              var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
+              piecePanning = positions.last[square];
+              var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
+              setState(() {
+                squaresSelected = [square];
+                offsets[piecePanning] = offsetCentered;
+                this.squaresValid = squaresValid;
+              });
+            }
+            else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
+              setState(() {
+                squaresSelected = [squaresSelected.first, square];
+              });
+            }
+          },
+          onPanUpdate: (pan) {
+            var offset = offsetFromGlobalPosition(pan.globalPosition);
+            var square = squareFromOffset(offset);
+            if (piecePanning != null) {
+              var offset = offsets[piecePanning];
+              var offsetUpdated = Offset(offset.dx + pan.delta.dx, offset.dy + pan.delta.dy);
+              setState(() {
+                offsets[piecePanning] = offsetUpdated;
+              });
+            }
+            else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
+              if (squaresValid.contains(square)) {
+                setState(() {
+                  squaresSelected = [squaresSelected.first, square];
+                });
+              }
+              else {
+                setState(() {
+                  squaresSelected = [squaresSelected.first];
+                });
+              }
+            }
+          },
+          onPanEnd: (pan) {
+            if (squaresSelected.length == 2) {
+              var move = Move(squaresSelected.first, squaresSelected.last);
+              var _ = makeMove(move);
+              if (_ != null) {
+                setState(() {
+                  squaresSelected = [];
+                  squaresValid = [];
+                });
+              }
+            }
+            else {
+              displayPosition();
+            }
+            piecePanning = null;
+          }
       ),
       color: Colors.white,
     );
   }
 
   Widget widgetPiece(Piece piece) {
+    var namePiece = piece.type.toString().replaceFirst("TypePiece.", "");
+    var nameIsLight = piece.isLight ? "light" : "dark";
+    var name = "$namePiece-$nameIsLight";
     return Positioned(
       left: offsets[piece].dx,
       top: offsets[piece].dy,
-      child: GestureDetector(
-        onTapUp: (tap) {
-          var square = game.squareOfPiece(piece);
-          if (square == null) {
-            selectSquare(square);
-          }
-          else if (square != squareSelected) {
-            var move = Move(squareSelected, square);
-            var codePNG = makeMove(move);
-            if (codePNG == null) {
-              selectSquare(square);
-            }
-            else {
-              setState(() {
-                squareSelected = null;
-                squaresValid = [];
-              });
-            }
-          }
-        },
-        onPanStart: (pan) {
-          var square = game.squareOfPiece(piece);
-          selectSquare(square);
-        },
-        onPanUpdate: (pan) {
-          var offset = Offset(offsets[piece].dx + pan.delta.dx, offsets[piece].dy + pan.delta.dy);
-          setState(() {
-            offsets[piece] = offset;
-          });
-        },
-        onPanEnd: (pan) {
-//          setState(() {
-//            squareSelected = null;
-//            squaresValid = [];
-//          });
-          var offset = offsets[piece];
-          var square1 = game.squareOfPiece(piece);
-          var square2 = squareFromOffset(offset);
-          var move = Move(square1, square2);
-          makeMove(move);
-        },
+      child: IgnorePointer(
         child: Container(
-          child: WidgetPiece.withPiece(piece),
-          height: MediaQuery.of(context).size.height / 8 * 1,
-          width: MediaQuery.of(context).size.height / 8 * 1,
+          child: Image.asset(
+              "sets/default/$name.png"
+          ),
+          height: heightSquare * 1,
+          width: heightSquare * 1,
         ),
       ),
     );
   }
 
-  Widget widgetSquareSelection(Square square) {
+  Widget widgetSquareSelected(Square square) {
     var offset = offsetFromSquare(square);
     return Positioned(
       left: offset.dx,
       top: offset.dy,
-      child: Container(
-        color: colorSelection,
-        height: MediaQuery.of(context).size.height / 8 * 1,
-        width: MediaQuery.of(context).size.height / 8 * 1,
+      child: IgnorePointer(
+        child: Container(
+          color: colorSelection,
+          height: heightSquare * 1,
+          width: heightSquare * 1,
+        ),
       ),
     );
   }
@@ -321,10 +362,12 @@ class WidgetGameState extends State<WidgetGame> {
     return Positioned(
       left: offset.dx,
       top: offset.dy,
-      child: Container(
-        color: colorSelection,
-        height: MediaQuery.of(context).size.height / 8 * 1,
-        width: MediaQuery.of(context).size.height / 8 * 1,
+      child: IgnorePointer(
+        child: Container(
+          color: colorSelection,
+          height: heightSquare * 1,
+          width: heightSquare * 1,
+        ),
       ),
     );
   }
@@ -332,14 +375,16 @@ class WidgetGameState extends State<WidgetGame> {
   Widget widgetSquareValid(Square square) {
     var offset = offsetFromSquare(square);
     return Positioned(
-      left: offset.dx + MediaQuery.of(context).size.height / 8*3/4/2,
-      top: offset.dy + MediaQuery.of(context).size.height / 8*3/4/2,
+      left: offset.dx + heightSquare*3/4/2,
+      top: offset.dy + heightSquare*3/4/2,
       child: ClipOval(
-          child: Container(
-            color: colorSquareValid,
-            height: MediaQuery.of(context).size.height / 8 / 4,
-            width: MediaQuery.of(context).size.height / 8 / 4,
-          )
+          child: IgnorePointer(
+            child: Container(
+              color: colorSquareValid,
+              height: heightSquare / 4,
+              width: heightSquare / 4,
+            ),
+          ),
       ),
     );
   }
@@ -347,27 +392,30 @@ class WidgetGameState extends State<WidgetGame> {
   Widget widgetCode(String code, int index) {
     var isLast = index == codesMoves.length - 1;
     return GestureDetector(
-      child: ClipRRect(
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(RADIUS_PNG),
-              topRight: Radius.circular(RADIUS_PNG),
-              bottomRight: Radius.circular(RADIUS_PNG),
-              bottomLeft: Radius.circular(RADIUS_PNG)),
-          child: Container(
-            child: Text(
-              code,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: SIZE_PNG,
-                fontWeight: FontWeight.normal,
+      child: Center(
+        child: ClipRRect(
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(RADIUS_PNG),
+                topRight: Radius.circular(RADIUS_PNG),
+                bottomRight: Radius.circular(RADIUS_PNG),
+                bottomLeft: Radius.circular(RADIUS_PNG)),
+            child: Container(
+              child: Text(
+                code,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: SIZE_PNG,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
-            ),
-            color: isLast ? colorPNGSelected : Colors.transparent,
-            padding: EdgeInsets.symmetric(
-                horizontal: isLast ? INSET_CONTAINER_PNG : 0.0),
-          )
+              color: isLast ? colorPNGSelected : Colors.transparent,
+              padding: EdgeInsets.symmetric(
+                  horizontal: isLast ? INSET_CONTAINER_PNG : 0.0
+              ),
+            )
+        ),
       ),
-      onTapDown: (_) {
+      onTap: () {
 //        if (index != indexPosition) {
 //          print(indexPosition);
 //          indexPosition = index;
@@ -423,16 +471,21 @@ class WidgetGameState extends State<WidgetGame> {
   // UTIL
   // ...
   // ...
+  Offset offsetFromGlobalPosition(Offset position) {
+    var darkSpace =  MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
+    return Offset(position.dx - (darkSpace/2), position.dy);
+  }
+
   Offset offsetFromSquare(Square square) {
-    var dx = (square.column - 1.0) * MediaQuery.of(context).size.height / 8;
-    var dy = (9.0 - square.row - 1.0) * MediaQuery.of(context).size.height / 8;
+    var dx = (square.column - 1.0) * heightSquare;
+    var dy = isLightOrientation ? (8 - square.row) * heightSquare : (square.row) * heightSquare;
     return Offset(dx, dy);
   }
 
   Square squareFromOffset(Offset offset) {
-    var column = (offset.dx / MediaQuery.of(context).size.height / 8 + 1.0).round();
-    var row = -1 * (1.0 + offset.dy / MediaQuery.of(context).size.height / 8 - 9.0).round();
-    return Square(column, row);
+    var column = (offset.dx / heightSquare + 1.0);
+    var row = (isLightOrientation ? -offset.dy / heightSquare + 9 : offset.dy / heightSquare + 1);
+    return Square(column.floor(), row.floor());
   }
 
   getColorBoard() async {
@@ -456,18 +509,21 @@ class WidgetGameState extends State<WidgetGame> {
     game = Game.standard();
     timer = Timer(timeTotal: 300.0);
 
-    listPositions = [game.board];
-    displayPositionAtIndex(listPositions.length - 1);
+    positions = [game.board];
+    displayPosition();
+
+    squaresSelected = [];
+    squaresValid = [];
 
     setState(() {
       this.offsets = offsets;
       codesMoves = [];
-      this.timeTotalLight = timer.timeTotal;
-      this.timeTotalDark = timer.timeTotal;
+      timeTotalLight = timer.timeTotal;
+      timeTotalDark = timer.timeTotal;
     });
   }
 
-  makeMove(Move move) {
+  String makeMove(Move move) {
 
     // TODO: return if not in last position
 
@@ -475,11 +531,11 @@ class WidgetGameState extends State<WidgetGame> {
 
     if (movePNG != null) {
 
-      listPositions.add(game.board);
-
       setState(() {
         codesMoves.add(movePNG);
       });
+
+      positions.add(game.board);
 
       timer.addTimestampEnd();
       timer.addTimestampStart();
@@ -498,13 +554,17 @@ class WidgetGameState extends State<WidgetGame> {
       }
     }
 
-    displayPositionAtIndex(listPositions.length - 1);
+    displayPosition();
+
+    return movePNG;
   }
 
-  displayPositionAtIndex(int index) {
-    var position = listPositions[index];
+  displayPosition({int index}) {
+    if (index == null) {
+      index = positions.length - 1; // defaults to last position
+    }
+    var position = positions[index];
     var offsets = calculateOffsets(position);
-    print(game.moves.length);
     var moveLast = max(0, index - 1) < game.moves.length ? game.moves[index - 1] : null;
     setState(() {
       this.moveLast = moveLast;
@@ -521,14 +581,6 @@ class WidgetGameState extends State<WidgetGame> {
           return offset;
         });
     return map;
-  }
-
-  selectSquare(Square square) {
-    var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
-    setState(() {
-      squareSelected = square;
-      this.squaresValid = squaresValid;
-    });
   }
 
   startTimer() {

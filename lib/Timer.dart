@@ -59,6 +59,9 @@ class Timer {
   tick() async {
     while (true) {
       await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
+      if (stopped) {
+        break;
+      }
       if (timestampStart != null) {
         var timeUpdated = timeOnStart - (timestampNow - timestampStart);
         var timeUpdatedMaxed = max(0.0, timeUpdated);

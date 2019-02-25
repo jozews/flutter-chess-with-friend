@@ -293,7 +293,7 @@ class Game {
     return entriesFiltered.isNotEmpty ? entriesFiltered.first.key : null;
   }
 
-  List<Square> squaresFromSquareWithDelta(Square square1, Square delta, {int limit = -1, Square stopBeforeSquare, bool stopBeforePiece = false, bool stopBeforePieceIsLight, bool stopAfterPiece = false, bool stopAfterPieceIsLight, bool addTrailingSquare1 = false, bool addSquare1 = false}) {
+  List<Square> squaresFromSquareWithDelta(Square square1, Square delta, {int limit = -1, Square stopBeforeSquare, bool stopBeforePiece = false, bool stopBeforePieceIsLight, bool stopAfterPiece = false, bool stopAfterPieceIsLight, Piece ignorePiece, bool addSquare1 = false}) {
     List<Square> squares = [];
     var square = Square(square1.column + delta.column, square1.row + delta.row);
     while (square.inBounds && (limit == -1 || squares.length < limit)) {
@@ -301,14 +301,14 @@ class Game {
         break;
       }
       var pieceAtSquare = board[square];
-      if (stopBeforePiece && pieceAtSquare != null) {
+      if (stopBeforePiece && pieceAtSquare != null && pieceAtSquare != ignorePiece) {
         break;
       }
       if (stopBeforePieceIsLight != null && pieceAtSquare != null && pieceAtSquare.isLight == stopBeforePieceIsLight) {
         break;
       }
       squares.add(square);
-      if (stopAfterPiece && pieceAtSquare != null) {
+      if (stopAfterPiece && pieceAtSquare != null && pieceAtSquare != ignorePiece) {
         break;
       }
       if (stopAfterPieceIsLight != null && pieceAtSquare != null && pieceAtSquare.isLight == stopAfterPieceIsLight) {
@@ -316,14 +316,8 @@ class Game {
       }
       square = Square(square.column + delta.column, square.row + delta.row);
     }
-    if (squares.isNotEmpty) {
-      if (addSquare1) {
-        squares.insert(0, square1);
-      }
-      if (addTrailingSquare1) {
-        var squareOneBefore = Square(square1.column - delta.column, square1.row - delta.row);
-        squares.insert(0, squareOneBefore);
-      }
+    if (squares.isNotEmpty && addSquare1) {
+      squares.insert(0, square1);
     }
     return squares;
   }
@@ -342,17 +336,14 @@ class Game {
   }
 
 
-  List<List<Square>> getChecks(Piece king, {Square squareToMove}) {
+  List<List<Square>> getChecks(Square square, bool isLight) {
 
-    var squareOfKing = squareOfPiece(king);
-    if (squareToMove != null) {
-      squareOfKing = squareToMove;
-    }
+    var king = getEntriesFiltered(TypePiece.king, isLight).first.value;
 
     List<List<Square>> checks = [];
 
     for (Square deltaCheck in deltasCheck()) {
-      var squares = squaresFromSquareWithDelta(squareOfKing, deltaCheck, addTrailingSquare1: squareToMove == null, stopAfterPiece: true, addSquare1: true);
+      var squares = squaresFromSquareWithDelta(square, deltaCheck, stopAfterPiece: true, ignorePiece: king);
       if (squares.isEmpty) {
         continue;
       }
@@ -361,7 +352,7 @@ class Game {
       if (pieceLast == null || pieceLast.isLight != !isLightToMove) {
         continue;
       }
-      var moveLastToKing = Move(squareLast, squareOfKing);
+      var moveLastToKing = Move(squareLast, square);
       var isDeltaMoveLastToKingValid = isDeltaValidForPieceMove(pieceLast, moveLastToKing, isCapture: true);
       if (!isDeltaMoveLastToKingValid) {
         continue;
@@ -472,9 +463,8 @@ class Game {
       return false;
     }
         
-    var kingToMove = getEntriesFiltered(TypePiece.king, isLightToMove).first.value;
-
-    var checks = getChecks(kingToMove);
+    var squareKing = getEntriesFiltered(TypePiece.king, isLightToMove).first.key;
+    var checks = getChecks(squareKing, isLightToMove);
 
     // king must step out of double check
     if (checks.length == 2 && pieceToMove.type != TypePiece.king) {
@@ -490,7 +480,7 @@ class Game {
 
       case TypePiece.king:
         if (isDeltaValidForKingMove(move)) {
-          var checks = getChecks(pieceToMove, squareToMove: move.square2);
+          var checks = getChecks(move.square2, pieceToMove.isLight);
           if (checks.isNotEmpty) {
             return false;
           }
@@ -507,7 +497,7 @@ class Game {
             return false;
           }
           for (Square square in squaresToCastle) {
-            var checks = getChecks(pieceToMove, squareToMove: square);
+            var checks = getChecks(square, pieceToMove.isLight);
             if (checks.isNotEmpty) {
               return false;
             }
@@ -647,7 +637,7 @@ class Game {
 
       case TypePiece.knight:
         for (Square delta in deltas) {
-          var squares = squaresFromSquareWithDelta(square1, delta, addSquare1: false, limit: 1, stopBeforePieceIsLight: pieceToMove.isLight);
+          var squares = squaresFromSquareWithDelta(square1, delta, limit: 1, stopBeforePieceIsLight: pieceToMove.isLight);
           squares2.addAll(squares);
         }
         break;
@@ -655,7 +645,7 @@ class Game {
       case TypePiece.pawn:
         for (Square delta in deltas) {
           var isCastleCapture = deltasPawnCapture(isLight: pieceToMove.isLight).contains(delta);
-          var squares = squaresFromSquareWithDelta(square1, delta, limit: isCastleCapture ? 1 : 2, stopBeforePieceIsLight: pieceToMove.isLight, stopBeforePiece: !isCastleCapture, addSquare1: false);
+          var squares = squaresFromSquareWithDelta(square1, delta, limit: isCastleCapture ? 1 : 2, stopBeforePieceIsLight: pieceToMove.isLight, stopBeforePiece: !isCastleCapture);
           squares2.addAll(squares);
         }
         break;
@@ -733,9 +723,10 @@ class Game {
     // toggle isLightToMove
     isLightToMove = !isLightToMove;
     
-    var entryKingToMove = getEntriesFiltered(TypePiece.king, isLightToMove).first;
+    var squareKing = getEntriesFiltered(TypePiece.king, isLightToMove).first.key;
+    var checks = getChecks(squareKing, isLightToMove);
+
     var entriesPiecesToMove = getEntriesFiltered(null, isLightToMove);
-    var checks = getChecks(entryKingToMove.value);
 
     var areThereValidMoves = false;
     for (MapEntry<Square, Piece> entryPiece in entriesPiecesToMove) {
