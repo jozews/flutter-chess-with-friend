@@ -263,7 +263,8 @@ class WidgetGameState extends State<WidgetGame> {
           onPanStart: (pan) {
             var offset = offsetFromGlobalPosition(pan.globalPosition);
             var square = squareFromOffset(offset);
-            if (squaresSelected.isEmpty) {
+            var piece = positions.last[square];
+            if (squaresSelected.isEmpty || piece != null) {
               var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
               piecePanning = positions.last[square];
               var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
@@ -303,7 +304,21 @@ class WidgetGameState extends State<WidgetGame> {
             }
           },
           onPanEnd: (pan) {
-            if (squaresSelected.length == 2) {
+            if (squaresSelected.isNotEmpty && piecePanning != null) {
+              var offset = offsets[piecePanning];
+              var offsetCentered = Offset(offset.dx + heightSquare/2, offset.dy + heightSquare/2);
+              var square2 = squareFromOffset(offsetCentered);
+              var move = Move(squaresSelected.first, square2);
+              var _ = makeMove(move);
+              if (_ != null) {
+                setState(() {
+                  squaresSelected = [];
+                  squaresValid = [];
+                });
+              }
+              piecePanning = null;
+            }
+            else if (squaresSelected.length == 2) {
               var move = Move(squaresSelected.first, squaresSelected.last);
               var _ = makeMove(move);
               if (_ != null) {
@@ -313,10 +328,6 @@ class WidgetGameState extends State<WidgetGame> {
                 });
               }
             }
-            else {
-              displayPosition();
-            }
-            piecePanning = null;
           }
       ),
       color: Colors.white,
