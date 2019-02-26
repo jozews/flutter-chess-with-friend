@@ -31,4 +31,12 @@ flutter:
   uses-material-design: true
 
   assets:
-   - sets/default/
+    - sets/alpha/
+    - sets/bases/
+    - sets/classic/
+    - sets/light/
+    - sets/modern/
+    - sets/nature/
+    - sets/neo/
+    - sets/space/
+    - sets/wood/

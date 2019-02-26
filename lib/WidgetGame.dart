@@ -36,18 +36,33 @@ class WidgetGameState extends State<WidgetGame> {
     Colors.tealAccent,
     Colors.limeAccent,
   ];
-
-  static const RADIUS_PNG = 5.0;
+  static const NAME_PIECES = [
+    "alpha",
+    "bases",
+    "classic",
+    "light",
+    "modern",
+    "nature",
+    "neo",
+    "space",
+    "wood",
+    ""
+  ];
+  
+  static const RADIUS_CODE = 5.0;
   static const RADIUS_ALERT = 5.0;
+  static const RADIUS_DECORATION_ACCENT = 5.0;
+  static const RADIUS_DECORATION_NAME_PIECE = 25.0;
 
   static const SIZE_CODE = 19.0;
   static const SIZE_TIME = 26.0;
   static const SIZE_SETTINGS_TITLE = 15.0;
   static const SIZE_SETTINGS_SUBTITLE = 14.0;
   static const SIZE_ACCENT = 20.0;
+  static const SIZE_PIECE = 26.0;
 
   static const INSET_VERTICAL_TIME = 12.0;
-  static const INSET_CONTAINER_CODE = 2.0;
+  static const INSET_CODE = 3.0;
   static const INSET_ALERT_TEXT = 25.0;
   static const INSET_CODES_START = 50.0;
   static const INSET_CODES_END = 5.0;
@@ -101,27 +116,26 @@ class WidgetGameState extends State<WidgetGame> {
   int indexFirstCodeRight;
   int countMaxCodes;
 
-  // STATES
+  // BOOLS
   // ...
   var isAlertShowing = false;
   var isGameSetup = false;
   var isGameOngoing = false;
   var isSettingsShowing = false;
+  var isLightOrientation = true;
 
-  // CONFIGURATION
-  // ...
+  // SETTINGS
   // ...
   MaterialAccentColor accentBoard;
   Color get colorBoardDark => accentBoard.shade200.withAlpha((0.8 * 255).toInt());
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
-
-  var isLightOrientation = true;
   var showsValidMoves = true;
+  int indexNamePieces;
 
   // UTIL
   // ...
   get heightSquare => min(MediaQuery.of(context).size.height, MediaQuery.of(context).size.width) / 8;
-  get heightCode => SIZE_CODE + INSET_CONTAINER_CODE*2;
+  get heightCode => SIZE_CODE + INSET_CODE*2;
   get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
 
   // STATE
@@ -131,7 +145,7 @@ class WidgetGameState extends State<WidgetGame> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIOverlays([]);
-    setupOnInit();
+    setup();
   }
 
   @override
@@ -152,7 +166,8 @@ class WidgetGameState extends State<WidgetGame> {
           ),
           isAlertShowing || isSettingsShowing ? widgetDim() : Container(),
           isAlertShowing ? widgetAlert() : Container(),
-          !isGameOngoing ? widgetIconSettings() : Container(),
+          widgetIconSettings(),
+//          !isGameOngoing ? widgetIconSettings() : Container(),
           isSettingsShowing ? widgetSettings() : Container()
         ],
       ),
@@ -190,149 +205,224 @@ class WidgetGameState extends State<WidgetGame> {
       alignment: Alignment.centerLeft,
       child: Container(
         child: Container(
-          child: Column(
+          child: ListView(
             children: <Widget>[
-              widgetTitle("Time"),
-              Container(
-                child: Wrap(
-                  children: <Widget>[
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "3 min",
-                          isSelected: controlTimer == ControlTimer.min3
+              isGameOngoing || !isGameSetup ? GestureDetector(
+                child: Center(
+                  child: Container(
+                      child: widgetTitle(
+                          isGameOngoing ? "end" : "new"
                       ),
-                      onTap: () {
-                        controlTimer = ControlTimer.min3;
-                        timer = Timer.control(controlTimer);
-                        setState(() {
-                          timeTotalLight = timer.timeTotal;
-                          timeTotalDark = timer.timeTotal;
-                        });
-                      },
+                    margin: EdgeInsets.only(
+                      top: INSET_VERTICAL_SHORT_SETTINGS,
                     ),
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "5 min",
-                          isSelected: controlTimer == ControlTimer.min5
-                      ),
-                      onTap: () {
-                        controlTimer = ControlTimer.min5;
-                        timer = Timer.control(controlTimer);
-                        setState(() {
-                          timeTotalLight = timer.timeTotal;
-                          timeTotalDark = timer.timeTotal;
-                        });
-                      },
-                    ),
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "10 min",
-                          isSelected: controlTimer == ControlTimer.min10
-                      ),
-                      onTap: () {
-                        controlTimer = ControlTimer.min10;
-                        timer = Timer.control(controlTimer);
-                        setState(() {
-                          timeTotalLight = timer.timeTotal;
-                          timeTotalDark = timer.timeTotal;
-                        });
-                      },
-                    ),
-                  ],
-                  spacing: 0,
+                  ),
                 ),
-                margin: EdgeInsets.only(
-                  top: INSET_VERTICAL_SHORT_SETTINGS,
+                onTap: () {
+                  if (isGameOngoing) {
+                    endGame();
+                  }
+                  else {
+                    setupGame();
+                  }
+                },
+              ) : Container(),
+              !isGameOngoing ? Center(
+                  child: widgetTitle(
+                      "Time"
+                  )
+              ) : Container(),
+              !isGameOngoing ? Center(
+                child: Container(
+                  child: Wrap(
+                    children: <Widget>[
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "3 min",
+                            isSelected: controlTimer == ControlTimer.min3
+                        ),
+                        onTap: () {
+                          controlTimer = ControlTimer.min3;
+                          timer = Timer.control(controlTimer);
+                          setState(() {
+                            timeTotalLight = timer.timeTotal;
+                            timeTotalDark = timer.timeTotal;
+                          });
+                        },
+                      ),
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "5 min",
+                            isSelected: controlTimer == ControlTimer.min5
+                        ),
+                        onTap: () {
+                          controlTimer = ControlTimer.min5;
+                          timer = Timer.control(controlTimer);
+                          setState(() {
+                            timeTotalLight = timer.timeTotal;
+                            timeTotalDark = timer.timeTotal;
+                          });
+                        },
+                      ),
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "10 min",
+                            isSelected: controlTimer == ControlTimer.min10
+                        ),
+                        onTap: () {
+                          controlTimer = ControlTimer.min10;
+                          timer = Timer.control(controlTimer);
+                          setState(() {
+                            timeTotalLight = timer.timeTotal;
+                            timeTotalDark = timer.timeTotal;
+                          });
+                        },
+                      ),
+                    ],
+                    spacing: 0,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                  ),
+                ),
+              ) : Container(),
+              Center(
+                  child: widgetTitle(
+                      "Orientation"
+                  )
+              ),
+              Center(
+                child: Container(
+                  child: Wrap(
+                    children: <Widget>[
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "light",
+                            isSelected: isLightOrientation
+                        ),
+                        onTap: () {
+                          this.isLightOrientation = true;
+                          displayPosition();
+                        },
+                      ),
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "dark",
+                            isSelected: !isLightOrientation
+                        ),
+                        onTap: () {
+                          this.isLightOrientation = false;
+                          displayPosition();
+                        },
+                      ),
+                    ],
+                    spacing: 0,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                  ),
                 ),
               ),
-              widgetTitle("Orientation"),
-              Container(
-                child: Wrap(
-                  children: <Widget>[
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "light",
-                          isSelected: isLightOrientation
+              Center(
+                  child: widgetTitle(
+                      "Show valid moves"
+                  )
+              ),
+              Center(
+                child: Container(
+                  child: Wrap(
+                    children: <Widget>[
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "yes",
+                            isSelected: showsValidMoves
+                        ),
+                        onTap: () {
+                          this.showsValidMoves = true;
+                          displayPosition();
+                        },
                       ),
-                      onTap: () {
-                        this.isLightOrientation = true;
-                        displayPosition();
-                      },
-                    ),
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "dark",
-                          isSelected: !isLightOrientation
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "no",
+                            isSelected: !showsValidMoves
+                        ),
+                        onTap: () {
+                          this.showsValidMoves = false;
+                          displayPosition();
+                        },
                       ),
-                      onTap: () {
-                        this.isLightOrientation = false;
-                        displayPosition();
-                      },
-                    ),
-                  ],
-                  spacing: 0,
-                ),
-                margin: EdgeInsets.only(
-                  top: INSET_VERTICAL_SHORT_SETTINGS,
+                    ],
+                    spacing: 0,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                  ),
                 ),
               ),
-              widgetTitle("Show valid moves"),
-              Container(
-                child: Wrap(
-                  children: <Widget>[
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "yes",
-                          isSelected: showsValidMoves
-                      ),
-                      onTap: () {
-                        this.showsValidMoves = true;
-                        displayPosition();
-                      },
-                    ),
-                    GestureDetector(
-                      child: widgetSettingSelection(
-                          title: "no",
-                          isSelected: !showsValidMoves
-                      ),
-                      onTap: () {
-                        this.showsValidMoves = false;
-                        displayPosition();
-                      },
-                    ),
-                  ],
-                  spacing: 0,
-                ),
-                margin: EdgeInsets.only(
-                  top: INSET_VERTICAL_SHORT_SETTINGS,
+              Center(
+                  child: widgetTitle(
+                      "Color"
+                  )
+              ),
+              Center(
+                child: Container(
+                  child: Wrap(
+                    children: ACCENTS.map<Widget>((accent) {
+                      return GestureDetector(
+                        child: widgetAccent(
+                          accent,
+                          isSelected: accent == accentBoard,
+                        ),
+                        onTap: () {
+                          setState(() {
+                            accentBoard = accent;
+                          });
+                        },
+                      );
+                    }).toList(),
+                    spacing: 4,
+                    runSpacing: 4,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                    left: INSET_HORIZONTAL_SETTINGS,
+                    right: INSET_HORIZONTAL_SETTINGS,
+                  ),
                 ),
               ),
-              widgetTitle("Color"),
-              Container(
-                child: Wrap(
-                  children: ACCENTS.map<Widget>((accent) {
-                    return GestureDetector(
-                      child: widgetAccent(
-                        accent,
-                        isSelected: accent == accentBoard,
-                      ),
-                      onTap: () {
-                        setState(() {
-                          accentBoard = accent;
-                        });
-                      },
-                    );
-                  }).toList(),
-                  spacing: 4,
-                  runSpacing: 4,
-                ),
-                margin: EdgeInsets.only(
-                  top: INSET_VERTICAL_SHORT_SETTINGS,
-                  left: INSET_HORIZONTAL_SETTINGS,
-                  right: INSET_HORIZONTAL_SETTINGS,
-                ),
+              Center(
+                  child: widgetTitle(
+                      "Pieces"
+                  )
               ),
-              widgetTitle("Pieces"),
+              Center(
+                child: Container(
+                  child: Wrap(
+                    children: NAME_PIECES.map<Widget>((namePiece) {
+                      return GestureDetector(
+                        child: widgetSetPiece(
+                          namePiece,
+                          isSelected: NAME_PIECES.indexOf(namePiece) == indexNamePieces,
+                        ),
+                        onTap: () {
+                          setState(() {
+                            indexNamePieces = NAME_PIECES.indexOf(namePiece);
+                          });
+                        },
+                      );
+                    }).toList(),
+                    spacing: 4,
+                    runSpacing: 4,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                    left: INSET_HORIZONTAL_SETTINGS,
+                    right: INSET_HORIZONTAL_SETTINGS,
+                    bottom: INSET_VERTICAL_SHORT_SETTINGS
+                  ),
+                ),
+              )
             ],
           ),
           color: colorBackground1,
@@ -391,13 +481,41 @@ class WidgetGameState extends State<WidgetGame> {
           ),
           borderRadius: BorderRadius.all(
             Radius.circular(
-                5.0
+                RADIUS_DECORATION_ACCENT
             )
         ),
         color: accent.shade200,
       ),
       height: SIZE_ACCENT,
       width: SIZE_ACCENT,
+    );
+  }
+
+  Widget widgetSetPiece(String namePiece, {bool isSelected}) {
+    return Container(
+      child: namePiece.isNotEmpty ? Image.asset(
+          "sets/$namePiece/king-light.png"
+      ) : Center(
+        child: Text(
+          "?",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20.0
+          ),
+        ),
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(
+            color: isSelected ? Colors.white : Colors.transparent
+        ),
+        borderRadius: BorderRadius.all(
+            Radius.circular(
+                RADIUS_DECORATION_NAME_PIECE
+            )
+        ),
+      ),
+      height: SIZE_PIECE,
+      width: SIZE_PIECE,
     );
   }
 
@@ -493,7 +611,7 @@ class WidgetGameState extends State<WidgetGame> {
                     onPanUpdate: (pan) {
                       var yPosition = pan.globalPosition.dy;
                       var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
-                      var heightChildren = SIZE_CODE + INSET_CONTAINER_CODE*2;
+                      var heightChildren = SIZE_CODE + INSET_CODE*2;
                       var indexChildren = max(0, yPositionNormal/heightChildren).floor();
                       var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
                       if (indexPosition != this.indexPosition && indexPosition < positions.length) {
@@ -682,17 +800,18 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   Widget widgetPiece(Piece piece) {
-    var namePiece = piece.type.toString().replaceFirst("TypePiece.", "");
+    var nameTypePiece = piece.type.toString().replaceFirst("TypePiece.", "");
     var nameIsLight = piece.isLight ? "light" : "dark";
-    var name = "$namePiece-$nameIsLight";
+    var namePiece = "$nameTypePiece-$nameIsLight";
+    var nameSet = NAME_PIECES[indexNamePieces];
     return Positioned(
       left: offsets[piece].dx,
       top: offsets[piece].dy,
       child: IgnorePointer(
         child: Container(
-          child: Image.asset(
-              "sets/default/$name.png"
-          ),
+          child: nameSet.isNotEmpty ? Image.asset(
+              "sets/$nameSet/$namePiece.png"
+          ) : Container(),
           height: heightSquare * 1,
           width: heightSquare * 1,
         ),
@@ -752,26 +871,26 @@ class WidgetGameState extends State<WidgetGame> {
     var isSelected = indexPosition == this.indexPosition;
     return GestureDetector(
       child: Center(
-        child: ClipRRect(
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(RADIUS_PNG),
-                topRight: Radius.circular(RADIUS_PNG),
-                bottomRight: Radius.circular(RADIUS_PNG),
-                bottomLeft: Radius.circular(RADIUS_PNG)),
-            child: Container(
-              child: Text(
-                code,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: SIZE_CODE,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-              color: isSelected ? colorPNGSelected : Colors.transparent,
-              padding: EdgeInsets.all(
-                  INSET_CONTAINER_CODE
-              ),
-            )
+        child: Container(
+          child: Text(
+            code,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: SIZE_CODE,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.all(
+                Radius.circular(
+                    RADIUS_CODE
+                )
+            ),
+            color: isSelected ? colorPNGSelected : Colors.transparent,
+          ),
+          padding: EdgeInsets.all(
+              INSET_CODE
+          ),
         ),
       ),
     );
@@ -787,24 +906,24 @@ class WidgetGameState extends State<WidgetGame> {
         ),
       ),
       padding: EdgeInsets.all(
-          INSET_CONTAINER_CODE
+          INSET_CODE
       ),
     );
   }
 
   Widget widgetAlert() {
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(RADIUS_ALERT),
-            topRight: Radius.circular(RADIUS_ALERT),
-            bottomRight: Radius.circular(RADIUS_ALERT),
-            bottomLeft: Radius.circular(RADIUS_ALERT)),
-        child: Container(
-          child: Text(getAlertTitle()),
+      child: Container(
+        child: Text(getAlertTitle()),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(
+              Radius.circular(
+                  RADIUS_ALERT
+              )
+          ),
           color: Colors.white,
-          padding: EdgeInsets.all(INSET_ALERT_TEXT),
         ),
+        padding: EdgeInsets.all(INSET_ALERT_TEXT),
       ),
     );
   }
@@ -846,7 +965,7 @@ class WidgetGameState extends State<WidgetGame> {
     return Square(column.floor(), row.floor());
   }
 
-  setupOnInit() async {
+  setup() async {
     await getDefaults();
     setupGame();
   }
@@ -854,15 +973,18 @@ class WidgetGameState extends State<WidgetGame> {
   getDefaults() async {
     var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
     var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? Random().nextInt(ACCENTS.length - 1);
+    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? 0;
     setState(() {
       this.showsValidMoves = showsValidMoves;
       accentBoard = ACCENTS[indexAccent];
+      this.indexNamePieces = indexNamePieces;
     });
   }
 
   setDefaults() async {
     await Defaults.setBool(Defaults.SHOWS_VALID_MOVES, showsValidMoves);
     await Defaults.setInt(Defaults.INDEX_ACCENT, ACCENTS.indexOf(accentBoard));
+    await Defaults.setInt(Defaults.INDEX_NAME_PIECES, indexNamePieces);
   }
 
   setupGame() async {
@@ -910,6 +1032,7 @@ class WidgetGameState extends State<WidgetGame> {
 
   endGame() async  {
     displayPosition();
+    timer.stop();
     setState(() {
       isGameSetup = false;
       isGameOngoing = false;
@@ -947,7 +1070,6 @@ class WidgetGameState extends State<WidgetGame> {
       // show alert: CHECKMATE! or stalemate
       if (game.state != StateGame.ongoing) {
         endGame();
-        timer.stop();
         setState(() {
           isAlertShowing = true;
         });

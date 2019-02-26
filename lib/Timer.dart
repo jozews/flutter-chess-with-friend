@@ -48,6 +48,8 @@ class Timer {
         incrementOnEnd = 0.0;
         break;
     }
+    timeLight = timeTotal;
+    timeDark = timeTotal;
   }
 
   double timestampStart;
@@ -87,7 +89,7 @@ class Timer {
       if (timestampStart != null) {
         var timeUpdated = timeOnStart - (timestampNow - timestampStart);
         var timeUpdatedMaxed = max(0.0, timeUpdated);
-        print(timeUpdatedMaxed);
+
         if (!stopped && timeUpdatedMaxed.ceil() != getTime(isLightTicking).ceil()) {
           setTime(isLightTicking, timeUpdatedMaxed);
           streamController.add(timeUpdatedMaxed);
