@@ -19,15 +19,20 @@ class WidgetGame extends StatefulWidget {
 
 
 class WidgetGameState extends State<WidgetGame> {
+
+  static const ACCENTS = [Colors.blueAccent, Colors.redAccent, Colors.deepOrangeAccent, Colors.pinkAccent, Colors.deepPurpleAccent, Colors.purpleAccent, Colors.pinkAccent, Colors.lightBlueAccent, Colors.indigoAccent, Colors.amberAccent, Colors.orangeAccent];
+
   static const RADIUS_PNG = 5.0;
   static const RADIUS_ALERT = 5.0;
 
-  static const SIZE_PNG = 18.0;
+  static const SIZE_PNG = 19.0;
   static const SIZE_TIME = 26.0;
 
   static const INSET_TIME_VERTICAL = 12.0;
-  static const INSET_CONTAINER_PNG = 5.0;
+  static const INSET_CONTAINER_PNG = 2.0;
   static const INSET_ALERT_TEXT = 25.0;
+  static const INSET_CODES_START = 50.0;
+  static const INSET_CODES_END = 5.0;
 
   get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -174,19 +179,50 @@ class WidgetGameState extends State<WidgetGame> {
                 ) : Container(),
                 Align(
                   alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
-                  child: ListView(
-                    children: (codesMoves ?? []).asMap().entries.where((entry) {
-                      return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
-                          : entry.key % 2 == (!isLightOrientation ? 0 : 1);
-                    }).map<Widget>((entry) {
-                      var code = entry.value;
-                      var index = entry.key;
-                      return widgetCode(code, index);
-                    }).toList(),
-                    reverse: isLeft,
-                    padding: EdgeInsets.only(
-                      top: !isLeft ? 45.0 : 0.0,
-                      bottom: isLeft ? 45.0 : 0.0,
+                  child: Container(
+                    child: GestureDetector(
+                      child: Column(
+                        children: (codesMoves ?? []).asMap().entries.where((entry) {
+                          return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
+                              : entry.key % 2 == (!isLightOrientation ? 0 : 1);
+                        }).map<Widget>((entry) {
+                          var code = entry.value;
+                          var index = entry.key;
+                          return widgetCode(code, index);
+                        }).toList(),
+                        verticalDirection: isLeft ? VerticalDirection.up : VerticalDirection.down,
+                      ),
+
+                      onTapUp: (tap) {
+                        var yPosition = tap.globalPosition.dy;
+                        var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
+                        var heightChildren = SIZE_PNG + INSET_CONTAINER_PNG*2;
+                        var indexChildren = max(0, yPositionNormal/heightChildren).floor();
+                        var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
+                        if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+                          displayPosition(index: indexPosition);
+                          setState(() {
+                            this.indexPosition = indexPosition;
+                          });
+                        }
+                      },
+                      onPanUpdate: (pan) {
+                        var yPosition = pan.globalPosition.dy;
+                        var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
+                        var heightChildren = SIZE_PNG + INSET_CONTAINER_PNG*2;
+                        var indexChildren = max(0, yPositionNormal/heightChildren).floor();
+                        var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
+                        if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+                          displayPosition(index: indexPosition);
+                          setState(() {
+                            this.indexPosition = indexPosition;
+                          });
+                        }
+                      }
+                    ),
+                    margin: EdgeInsets.only(
+                      top: !isLeft ? INSET_CODES_START : INSET_CODES_END,
+                      bottom: isLeft ? INSET_CODES_START : INSET_CODES_END,
                     ),
                   ),
                 )
@@ -216,6 +252,10 @@ class WidgetGameState extends State<WidgetGame> {
 
           },
           onTapDown: (tap) {
+            var isLastPosition = indexPosition == positions.length - 1;
+            if (!isLastPosition) {
+              return;
+            }
             var offset = offsetFromGlobalPosition(tap.globalPosition);
             var square = squareFromOffset(offset);
             var piece = positions.last[square];
@@ -249,6 +289,10 @@ class WidgetGameState extends State<WidgetGame> {
             }
           },
           onTapUp: (tap) {
+            var isLastPosition = indexPosition == positions.length - 1;
+            if (!isLastPosition) {
+              return;
+            }
             if (squaresSelected.length == 2) {
               var move = Move(squaresSelected.first, squaresSelected.last);
               var _ = makeMove(move);
@@ -261,10 +305,14 @@ class WidgetGameState extends State<WidgetGame> {
             }
           },
           onPanStart: (pan) {
+            var isLastPosition = indexPosition == positions.length - 1;
+            if (!isLastPosition) {
+              return;
+            }
             var offset = offsetFromGlobalPosition(pan.globalPosition);
             var square = squareFromOffset(offset);
             var piece = positions.last[square];
-            if (squaresSelected.isEmpty || piece != null) {
+            if (piece != null && squaresSelected.isEmpty) {
               var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
               piecePanning = positions.last[square];
               var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
@@ -281,6 +329,10 @@ class WidgetGameState extends State<WidgetGame> {
             }
           },
           onPanUpdate: (pan) {
+            var isLastPosition = indexPosition == positions.length - 1;
+            if (!isLastPosition) {
+              return;
+            }
             var offset = offsetFromGlobalPosition(pan.globalPosition);
             var square = squareFromOffset(offset);
             if (piecePanning != null) {
@@ -304,6 +356,10 @@ class WidgetGameState extends State<WidgetGame> {
             }
           },
           onPanEnd: (pan) {
+            var isLastPosition = indexPosition == positions.length - 1;
+            if (!isLastPosition) {
+              return;
+            }
             if (squaresSelected.isNotEmpty && piecePanning != null) {
               var offset = offsets[piecePanning];
               var offsetCentered = Offset(offset.dx + heightSquare/2, offset.dy + heightSquare/2);
@@ -401,7 +457,8 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   Widget widgetCode(String code, int index) {
-    var isLast = index == codesMoves.length - 1;
+    var indexPosition = index + 1;
+    var isSelected = indexPosition == this.indexPosition;
     return GestureDetector(
       child: Center(
         child: ClipRRect(
@@ -419,33 +476,14 @@ class WidgetGameState extends State<WidgetGame> {
                   fontWeight: FontWeight.normal,
                 ),
               ),
-              color: isLast ? colorPNGSelected : Colors.transparent,
+              color: isSelected ? colorPNGSelected : Colors.transparent,
               padding: EdgeInsets.symmetric(
-                  horizontal: isLast ? INSET_CONTAINER_PNG : 0.0
+                horizontal: INSET_CONTAINER_PNG,
+                vertical: INSET_CONTAINER_PNG
               ),
             )
         ),
       ),
-      onTap: () {
-//        if (index != indexPosition) {
-//          print(indexPosition);
-//          indexPosition = index;
-//          var offsets = calculateOffsets();
-//          setState(() {
-//            this.offsets = offsets;
-//          });
-//        }
-      },
-      onPanUpdate: (_) {
-//        if (index != indexPosition) {
-//          print(index);
-//          indexPosition = index;
-//          var offsets = calculateOffsets();
-//          setState(() {
-//            this.offsets = offsets;
-//          });
-//        }
-      },
     );
   }
 
@@ -503,12 +541,12 @@ class WidgetGameState extends State<WidgetGame> {
     var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT);
     if (indexAccent != null) {
       setState(() {
-        colorBoard = Colors.accents[indexAccent];
+        colorBoard = ACCENTS[indexAccent];
       });
     } else {
       setState(() {
-        var indexRandom = Random().nextInt(Colors.accents.length - 1);
-        colorBoard = Colors.accents[indexRandom];
+        var indexRandom = Random().nextInt(ACCENTS.length - 1);
+        colorBoard = ACCENTS[indexRandom];
       });
     }
   }
@@ -536,7 +574,10 @@ class WidgetGameState extends State<WidgetGame> {
 
   String makeMove(Move move) {
 
-    // TODO: return if not in last position
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition) {
+      return null;
+    }
 
     var movePNG = game.makeMove(move);
 
@@ -546,7 +587,8 @@ class WidgetGameState extends State<WidgetGame> {
         codesMoves.add(movePNG);
       });
 
-      positions.add(game.board);
+      var position = Map<Square, Piece>.from(game.board);
+      positions.add(position);
 
       timer.addTimestampEnd();
       timer.addTimestampStart();
@@ -571,12 +613,11 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   displayPosition({int index}) {
-    if (index == null) {
-      index = positions.length - 1; // defaults to last position
-    }
+    index = index == null ? positions.length - 1 : index; // defaults to last position
+    indexPosition = index;
     var position = positions[index];
     var offsets = calculateOffsets(position);
-    var moveLast = max(0, index - 1) < game.moves.length ? game.moves[index - 1] : null;
+    var moveLast = index > 0 && index - 1 < game.moves.length ? game.moves[index - 1] : null;
     setState(() {
       this.moveLast = moveLast;
       this.offsets = offsets;
@@ -596,11 +637,22 @@ class WidgetGameState extends State<WidgetGame> {
 
   startTimer() {
     timer.start().listen((time) {
-      setState(() {
-        timeTotalLight = timer.timeLight;
-        timeTotalDark = timer.timeDark;
-        showsAlert = timeTotalLight == 0 || timeTotalDark == 0;
-      });
+      if (timeTotalLight != timer.timeLight) {
+        setState(() {
+          timeTotalLight = timer.timeLight;
+        });
+      }
+      if (timeTotalDark != timer.timeDark) {
+        setState(() {
+          timeTotalDark = timer.timeDark;
+        });
+      }
+      var showsAlert = timeTotalLight == 0 || timeTotalDark == 0;
+      if (this.showsAlert != showsAlert) {
+        setState(() {
+          showsAlert = showsAlert;
+        });
+      }
     });
   }
 
@@ -625,9 +677,9 @@ class WidgetGameState extends State<WidgetGame> {
 
   // should be moved in diff file
   String getFormattedInterval(double interval) {
-    var intInterval = interval.toInt();
-    var minutes = intInterval ~/ 60;
-    var seconds = (intInterval % 60);
+    var intervalFloored = interval.floor();
+    var minutes = intervalFloored ~/ 60;
+    var seconds = (intervalFloored % 60);
     var minutesPadded = minutes < 10 ? "0$minutes" : minutes;
     var secondsPadded = seconds < 10 ? "0$seconds" : seconds;
     return "$minutesPadded:$secondsPadded";

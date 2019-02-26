@@ -65,8 +65,10 @@ class Timer {
       if (timestampStart != null) {
         var timeUpdated = timeOnStart - (timestampNow - timestampStart);
         var timeUpdatedMaxed = max(0.0, timeUpdated);
-        setTime(isLightTicking, timeUpdatedMaxed);
-        streamController.add(timeUpdatedMaxed);
+        if (timeUpdatedMaxed.floor() != getTime(isLightTicking).floor()) {
+          setTime(isLightTicking, timeUpdatedMaxed);
+          streamController.add(timeUpdatedMaxed);
+        }
         if (stopped || timeUpdatedMaxed == 0.0) {
           stop();
           break;
