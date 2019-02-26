@@ -294,7 +294,7 @@ class Game {
   }
 
   List<Square> squaresFromSquareWithDelta(Square square1, Square delta, {int limit = -1, Square stopBeforeSquare, bool stopBeforePiece = false, bool stopBeforePieceIsLight, bool stopAfterPiece = false, bool stopAfterPieceIsLight, Piece ignorePiece, bool addSquare1 = false}) {
-    List<Square> squares = [];
+    var squares = List<Square>();
     var square = Square(square1.column + delta.column, square1.row + delta.row);
     while (square.inBounds && (limit == -1 || squares.length < limit)) {
       if (stopBeforeSquare != null && square == stopBeforeSquare) {
@@ -340,7 +340,7 @@ class Game {
 
     var king = getEntriesFiltered(TypePiece.king, isLight).first.value;
 
-    List<List<Square>> checks = [];
+    var checks = List<List<Square>>();
 
     for (Square deltaCheck in deltasCheck()) {
       var squares = squaresFromSquareWithDelta(square, deltaCheck, stopAfterPiece: true, ignorePiece: king);
@@ -601,7 +601,7 @@ class Game {
       return [];
     }
 
-    List<Square> squares2 = [];
+   var squares2 =  List<Square>();
     var deltas = deltasForPiece(pieceToMove);
 
     switch (pieceToMove.type) {

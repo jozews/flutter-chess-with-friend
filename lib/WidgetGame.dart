@@ -25,11 +25,11 @@ class WidgetGameState extends State<WidgetGame> {
   static const RADIUS_PNG = 5.0;
   static const RADIUS_ALERT = 5.0;
 
-  static const SIZE_PNG = 19.0;
+  static const SIZE_CODE = 19.0;
   static const SIZE_TIME = 26.0;
 
   static const INSET_TIME_VERTICAL = 12.0;
-  static const INSET_CONTAINER_PNG = 2.0;
+  static const INSET_CONTAINER_CODE = 2.0;
   static const INSET_ALERT_TEXT = 25.0;
   static const INSET_CODES_START = 50.0;
   static const INSET_CODES_END = 5.0;
@@ -52,12 +52,16 @@ class WidgetGameState extends State<WidgetGame> {
   List<Map<Square, Piece>> positions;
   int indexPosition;
   Map<Piece, Offset> offsets;
+
+  // BOARD INTERACTION
+  // ...
   Piece piecePanning;
 
+  // DECORATIONS
+  // ..
   List<Square> squaresSelected;
   List<Square> squaresValid;
   Move moveLast;
-
   // NOTE: not implemented
   Square squareCheck;
   Move movePre;
@@ -69,7 +73,10 @@ class WidgetGameState extends State<WidgetGame> {
 
   // CODES
   // ...
-  List<String> codesMoves;
+  List<String> codes;
+  int indexFirstCodeLeft;
+  int indexFirstCodeRight;
+  int countMaxCodes;
 
   // ALERT
   // ...
@@ -88,6 +95,7 @@ class WidgetGameState extends State<WidgetGame> {
   // UTIL
   // ...
   get heightSquare => min(MediaQuery.of(context).size.height, MediaQuery.of(context).size.width) / 8;
+  get heightCode => SIZE_CODE + INSET_CONTAINER_CODE*2;
 
   // STATE
   // ...
@@ -159,8 +167,8 @@ class WidgetGameState extends State<WidgetGame> {
         color: colorBackground1,
         child: Stack(
           children: <Widget>[
-                timeTotalLight != null ? Align(
-                  alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+            timeTotalLight != null ? Align(
+              alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
                   child: Container(
                     child: Text(
                       isLeft ? (isLightOrientation
@@ -171,62 +179,72 @@ class WidgetGameState extends State<WidgetGame> {
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: SIZE_TIME,
-                          fontWeight: FontWeight.w500),
+                          fontWeight: FontWeight.w500
+                      ),
                     ),
                     margin: EdgeInsets.symmetric(
-                        vertical: INSET_TIME_VERTICAL),
+                        vertical: INSET_TIME_VERTICAL
+                    ),
                   ),
-                ) : Container(),
-                Align(
-                  alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
-                  child: Container(
-                    child: GestureDetector(
-                      child: Column(
-                        children: (codesMoves ?? []).asMap().entries.where((entry) {
-                          return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
-                              : entry.key % 2 == (!isLightOrientation ? 0 : 1);
-                        }).map<Widget>((entry) {
-                          var code = entry.value;
-                          var index = entry.key;
-                          return widgetCode(code, index);
-                        }).toList(),
-                        verticalDirection: isLeft ? VerticalDirection.up : VerticalDirection.down,
-                      ),
-
-                      onTapUp: (tap) {
-                        var yPosition = tap.globalPosition.dy;
-                        var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
-                        var heightChildren = SIZE_PNG + INSET_CONTAINER_PNG*2;
-                        var indexChildren = max(0, yPositionNormal/heightChildren).floor();
-                        var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
-                        if (indexPosition != this.indexPosition && indexPosition < positions.length) {
-                          displayPosition(index: indexPosition);
-                          setState(() {
-                            this.indexPosition = indexPosition;
-                          });
-                        }
-                      },
-                      onPanUpdate: (pan) {
-                        var yPosition = pan.globalPosition.dy;
-                        var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
-                        var heightChildren = SIZE_PNG + INSET_CONTAINER_PNG*2;
-                        var indexChildren = max(0, yPositionNormal/heightChildren).floor();
-                        var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
-                        if (indexPosition != this.indexPosition && indexPosition < positions.length) {
-                          displayPosition(index: indexPosition);
-                          setState(() {
-                            this.indexPosition = indexPosition;
-                          });
-                        }
+            ) : Container(),
+            codes != null ? Align(
+              alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+              child: Container(
+                child: GestureDetector(
+                    child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          countMaxCodes = (constraints.maxHeight / heightCode).floor() - 2;
+                          var codesSideAll = (codes ?? []).asMap().entries.where((entry) {
+                            return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
+                                : entry.key % 2 == (!isLightOrientation ? 0 : 1);
+                          }).toList();
+                          var indexFirstCode = isLeft ? indexFirstCodeLeft : indexFirstCodeRight;
+                          var count = indexFirstCode + countMaxCodes - (indexFirstCode > 0 ? 1 : 0);
+                          var countLastCode = min(codesSideAll.length, count - (count < codesSideAll.length ? 1 : 0));
+                          var codesSideShown = codesSideAll.sublist(indexFirstCode, countLastCode);
+                          return Column(
+                            children: <Widget>[(indexFirstCode > 0 ? Text("...") : Container())]
+                                + codesSideShown.map<Widget>((entry) {
+                                  var code = entry.value;
+                                  var index = entry.key;
+                                  return widgetCode(code, index);
+                                }).toList()
+                                + <Widget>[countLastCode < codesSideAll.length ? Text("...") : Container()],
+                            verticalDirection: isLeft ? VerticalDirection.up : VerticalDirection.down,
+                          );
+                        }),
+                    onTapUp: (tap) {
+                      var yPosition = tap.globalPosition.dy;
+                      var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
+                      var indexChildren = max(0, yPositionNormal/heightCode).floor();
+                      var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
+                      if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+                        displayPosition(index: indexPosition);
+                        setState(() {
+                          this.indexPosition = indexPosition;
+                        });
                       }
-                    ),
-                    margin: EdgeInsets.only(
-                      top: !isLeft ? INSET_CODES_START : INSET_CODES_END,
-                      bottom: isLeft ? INSET_CODES_START : INSET_CODES_END,
-                    ),
-                  ),
-                )
-              ],
+                      },
+                    onPanUpdate: (pan) {
+                      var yPosition = pan.globalPosition.dy;
+                      var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
+                      var heightChildren = SIZE_CODE + INSET_CONTAINER_CODE*2;
+                      var indexChildren = max(0, yPositionNormal/heightChildren).floor();
+                      var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
+                      if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+                        displayPosition(index: indexPosition);
+                        setState(() {
+                          this.indexPosition = indexPosition;
+                        });
+                      }
+                    }),
+                margin: EdgeInsets.only(
+                  top: !isLeft ? INSET_CODES_START : INSET_CODES_END,
+                  bottom: isLeft ? INSET_CODES_START : INSET_CODES_END,
+                ),
+              ),
+            ) : Container()
+          ],
         ),
       ),
     );
@@ -312,7 +330,7 @@ class WidgetGameState extends State<WidgetGame> {
             var offset = offsetFromGlobalPosition(pan.globalPosition);
             var square = squareFromOffset(offset);
             var piece = positions.last[square];
-            if (piece != null && squaresSelected.isEmpty) {
+            if (piece != null) {
               var squaresValid = game.validMoves(square).map((move) => move.square2).toList();
               piecePanning = positions.last[square];
               var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
@@ -338,8 +356,16 @@ class WidgetGameState extends State<WidgetGame> {
             if (piecePanning != null) {
               var offset = offsets[piecePanning];
               var offsetUpdated = Offset(offset.dx + pan.delta.dx, offset.dy + pan.delta.dy);
+              var squaresSelected = List<Square>.from(this.squaresSelected);
+              if (squaresValid.contains(square) && squaresSelected.last != square) {
+                squaresSelected = [squaresSelected.first, square];
+              }
+              else if (!squaresValid.contains(square)) {
+                squaresSelected = [squaresSelected.first];
+              }
               setState(() {
                 offsets[piecePanning] = offsetUpdated;
+                this.squaresSelected = squaresSelected;
               });
             }
             else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
@@ -472,14 +498,13 @@ class WidgetGameState extends State<WidgetGame> {
                 code,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: SIZE_PNG,
+                  fontSize: SIZE_CODE,
                   fontWeight: FontWeight.normal,
                 ),
               ),
               color: isSelected ? colorPNGSelected : Colors.transparent,
-              padding: EdgeInsets.symmetric(
-                horizontal: INSET_CONTAINER_PNG,
-                vertical: INSET_CONTAINER_PNG
+              padding: EdgeInsets.all(
+                  INSET_CONTAINER_CODE
               ),
             )
         ),
@@ -563,10 +588,12 @@ class WidgetGameState extends State<WidgetGame> {
 
     squaresSelected = [];
     squaresValid = [];
+    indexFirstCodeLeft = 0;
+    indexFirstCodeRight = 0;
 
     setState(() {
       this.offsets = offsets;
-      codesMoves = [];
+      codes = [];
       timeTotalLight = timer.timeTotal;
       timeTotalDark = timer.timeTotal;
     });
@@ -584,7 +611,7 @@ class WidgetGameState extends State<WidgetGame> {
     if (movePNG != null) {
 
       setState(() {
-        codesMoves.add(movePNG);
+        codes.add(movePNG);
       });
 
       var position = Map<Square, Piece>.from(game.board);
