@@ -12,6 +12,9 @@ class MoveTimer {
   double get duration => timestampEnded - timestampStarted;
 }
 
+enum ControlTimer {
+  min3, min5, min10
+}
 
 class Timer {
 
@@ -20,9 +23,31 @@ class Timer {
   double incrementOnStart;
   double incrementOnEnd;
 
+  ControlTimer control;
+
   Timer({this.timeTotal = 500.0, this.incrementOnStart = 0.0, this.incrementOnEnd = 0.0}) {
     timeLight = timeTotal;
     timeDark = timeTotal;
+  }
+
+  Timer.control(this.control) {
+    switch (control) {
+      case ControlTimer.min3:
+        timeTotal = 3*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 0.0;
+        break;
+      case ControlTimer.min5:
+        timeTotal = 5*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 0.0;
+        break;
+      case ControlTimer.min10:
+        timeTotal = 10*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 0.0;
+        break;
+    }
   }
 
   double timestampStart;
@@ -37,7 +62,7 @@ class Timer {
 
   var stopped = false;
 
-  var millisecondsTickPrecision = 10;
+  var millisecondsTickPrecision = 50;
 
   double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
   bool get isLightTicking => moves.length % 2 == 0;
@@ -59,13 +84,11 @@ class Timer {
   tick() async {
     while (true) {
       await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
-      if (stopped) {
-        break;
-      }
       if (timestampStart != null) {
         var timeUpdated = timeOnStart - (timestampNow - timestampStart);
         var timeUpdatedMaxed = max(0.0, timeUpdated);
-        if (timeUpdatedMaxed.floor() != getTime(isLightTicking).floor()) {
+        print(timeUpdatedMaxed);
+        if (!stopped && timeUpdatedMaxed.ceil() != getTime(isLightTicking).ceil()) {
           setTime(isLightTicking, timeUpdatedMaxed);
           streamController.add(timeUpdatedMaxed);
         }
