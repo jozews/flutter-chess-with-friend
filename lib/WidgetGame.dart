@@ -75,6 +75,8 @@ class WidgetGameState extends State<WidgetGame> {
   static const INSET_HORIZONTAL_SELECTION_SETTING = 6.0;
   static const INSET_VERTICAL_SELECTION_SETTING = 3.0;
 
+  static const MILLISECONDS_DELAY_SCROLL = 500;
+
   get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
   get colorBackground2 => Colors.white;
@@ -122,9 +124,8 @@ class WidgetGameState extends State<WidgetGame> {
 
   // NOTATIONS INTERACTION
   // ...
-  var areNotationsScrolling = false;
-  var millisecondsDelayScroll = 500;
-
+  int indexChildrenScrolling;
+  
   // BOOLS
   // ...
   var isAlertShowing = false;
@@ -621,7 +622,7 @@ class WidgetGameState extends State<WidgetGame> {
                       }
                     },
                     onPanEnd: (pan) {
-                      areNotationsScrolling = false;
+                      indexChildrenScrolling = false;
                     }),
                 margin: EdgeInsets.only(
                   top: !atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
@@ -1158,7 +1159,7 @@ class WidgetGameState extends State<WidgetGame> {
 
   scrollNotationsIfNeeded({int indexChildren, bool atLeft}) {
 
-    areNotationsScrolling = false;
+    indexChildrenScrolling = false;
 
     var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
 
@@ -1171,7 +1172,7 @@ class WidgetGameState extends State<WidgetGame> {
     var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
 
     if (shouldScrollUp || shouldScrollDown) {
-      areNotationsScrolling = true;
+      indexChildrenScrolling = true;
     }
 
     setState(() {
@@ -1197,7 +1198,7 @@ class WidgetGameState extends State<WidgetGame> {
       }
     });
 
-    await Future.delayed(Duration(milliseconds: millisecondsDelayScroll));
+    await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_SCROLL));
 
     scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
   }
