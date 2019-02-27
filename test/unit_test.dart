@@ -14,7 +14,7 @@ void main() {
     for (String movePNG in gamePNG.split(";")) {
       print("Making move $movePNG");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMovePNG(movePNG);
+      var isValid = game.makeMoveFromNotation(movePNG);
       expect(isValid, true);
     }
 
@@ -29,7 +29,7 @@ void main() {
     for (String movePNG in gamePNG.split(";")) {
       print("Making move $movePNG");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMovePNG(movePNG);
+      var isValid = game.makeMoveFromNotation(movePNG);
       expect(isValid, true);
     }
 
@@ -44,7 +44,7 @@ void main() {
     for (String movePNG in gamePNG.split(";")) {
       print("Making move $movePNG");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMovePNG(movePNG);
+      var isValid = game.makeMoveFromNotation(movePNG);
       expect(isValid, true);
     }
 

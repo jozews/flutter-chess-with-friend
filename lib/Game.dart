@@ -208,7 +208,7 @@ class Piece {
   bool operator ==(o) => o is Piece && o.squareFirst == squareFirst;
   int get hashCode => squareFirst.hashCode;
 
-  String get codePNG {
+  String get notationType {
     return type == TypePiece.king ? "K" 
         : type == TypePiece.queen ? "Q" 
         : type == TypePiece.bishop ? "B" 
@@ -240,8 +240,8 @@ class Square {
   bool operator ==(o) => o is Square && o.column == column && o.row == row;
   int get hashCode => hash2(column.hashCode, row.hashCode);
   
-  String get codePNG => codePNGColumn + row.toString();
-  String get codePNGColumn => "_abcdefgh".split("")[column];
+  String get notation => notationColumn + row.toString();
+  String get notationColumn => "_abcdefgh".split("")[column];
 }
 
 
@@ -745,52 +745,52 @@ class Game {
       }
     }
 
-    var codePiece = pieceToMove.codePNG;
-    var codeDisambiguation = "";
+    var notationType = pieceToMove.notationType;
+    var notationDisambiguation = "";
     if (pieceToMove.type == TypePiece.pawn && pieceTaken != null) {
-      codeDisambiguation = move.square1.codePNGColumn;
+      notationDisambiguation = move.square1.notationColumn;
     }
     if (entriesOtherWithValidSquare2.isNotEmpty) {
-      var setSquare1 = move.square1.codePNG.split("").toSet();
-      var setSquare1Other = entriesOtherWithValidSquare2.first.key.codePNG.split("").toSet();
+      var setSquare1 = move.square1.notation.split("").toSet();
+      var setSquare1Other = entriesOtherWithValidSquare2.first.key.notation.split("").toSet();
       var intersection = setSquare1Other.intersection(setSquare1);
-      codeDisambiguation = setSquare1.difference(intersection).first;
+      notationDisambiguation = setSquare1.difference(intersection).first;
     }
-    var codeCapture = pieceTaken != null ? "x" : "";
-    var codeSquare = move.square2.codePNG;
-    var codeEnd = state == StateGame.checkmateByBlack || state == StateGame.checkmateByLight ? "#" : checks.isNotEmpty ? "+" : "";
-    var movePNG = "$codePiece$codeDisambiguation$codeCapture$codeSquare$codeEnd";
+    var notationCapture = pieceTaken != null ? "x" : "";
+    var notationSquare = move.square2.notation;
+    var notationEnd = state == StateGame.checkmateByBlack || state == StateGame.checkmateByLight ? "#" : checks.isNotEmpty ? "+" : "";
+    var movePNG = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
 
     return movePNG;
   }
 
 
-  String makeMovePNG(String movePNG) {
+  String makeMoveFromNotation(String notation) {
 
-    if (movePNG == "") {
+    if (notation == "") {
       print("");
     }
 
     Square squareInitial;
     Square squareFinal;
 
-    var isShortCastle = movePNG == "O-O";
-    var isLongCastle = movePNG == "O-O-O";
+    var isShortCastle = notation == "O-O";
+    var isLongCastle = notation == "O-O-O";
 
     // if not castle
     // ...
     // ...
     if (!isShortCastle && !isLongCastle) {
 
-      var charsPNG = movePNG.split("");
+      var charsPNG = notation.split("");
       
       // get type piece
       // ...
-      var typePiece = movePNG.contains("K") ? TypePiece.king 
-      : movePNG.contains("Q") ? TypePiece.queen 
-      : movePNG.contains("B") ? TypePiece.bishop
-      : movePNG.contains("N") ? TypePiece.knight
-      : movePNG.contains("R") ? TypePiece.rook
+      var typePiece = notation.contains("K") ? TypePiece.king 
+      : notation.contains("Q") ? TypePiece.queen 
+      : notation.contains("B") ? TypePiece.bishop
+      : notation.contains("N") ? TypePiece.knight
+      : notation.contains("R") ? TypePiece.rook
       : TypePiece.pawn; 
 
       // get square final

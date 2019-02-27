@@ -1,3 +1,4 @@
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -49,12 +50,13 @@ class WidgetGameState extends State<WidgetGame> {
     ""
   ];
   
-  static const RADIUS_CODE = 5.0;
+  static const RADIUS_NOTATION = 5.0;
   static const RADIUS_ALERT = 5.0;
   static const RADIUS_DECORATION_ACCENT = 5.0;
   static const RADIUS_DECORATION_NAME_PIECE = 25.0;
+  static const RADIUS_SELECTION_SETTINGS = 10.0;
 
-  static const SIZE_CODE = 19.0;
+  static const SIZE_NOTATION = 19.0;
   static const SIZE_TIME = 26.0;
   static const SIZE_SETTINGS_TITLE = 15.0;
   static const SIZE_SETTINGS_SUBTITLE = 14.0;
@@ -62,14 +64,16 @@ class WidgetGameState extends State<WidgetGame> {
   static const SIZE_PIECE = 26.0;
 
   static const INSET_VERTICAL_TIME = 12.0;
-  static const INSET_CODE = 3.0;
+  static const INSET_NOTATION = 3.0;
   static const INSET_ALERT_TEXT = 25.0;
-  static const INSET_CODES_START = 50.0;
-  static const INSET_CODES_END = 5.0;
+  static const INSET_NOTATION_START = 50.0;
+  static const INSET_NOTATIONS_END = 5.0;
   static const INSET_SETTINGS = 10.0;
-  static const INSET_VERTICAL_SETTINGS = 12.0;
-  static const INSET_VERTICAL_SHORT_SETTINGS = 6.0;
+  static const INSET_VERTICAL_SETTINGS = 14.0;
+  static const INSET_VERTICAL_SHORT_SETTINGS = 7.0;
   static const INSET_HORIZONTAL_SETTINGS = 6.0;
+  static const INSET_HORIZONTAL_SELECTION_SETTING = 6.0;
+  static const INSET_VERTICAL_SELECTION_SETTING = 3.0;
 
   get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -109,12 +113,12 @@ class WidgetGameState extends State<WidgetGame> {
   double timeTotalLight;
   double timeTotalDark;
 
-  // CODES
+  // NOTATIONS
   // ...
-  List<String> codes;
-  int indexFirstCodeLeft;
-  int indexFirstCodeRight;
-  int countMaxCodes;
+  List<String> notations;
+  int indexFirstNotationLeft;
+  int indexFirstNotationRight;
+  int countColumnChildrenMax;
 
   // BOOLS
   // ...
@@ -122,7 +126,7 @@ class WidgetGameState extends State<WidgetGame> {
   var isGameSetup = false;
   var isGameOngoing = false;
   var isSettingsShowing = false;
-  var isLightOrientation = true;
+  var isOrientationLight = true;
 
   // SETTINGS
   // ...
@@ -134,9 +138,12 @@ class WidgetGameState extends State<WidgetGame> {
 
   // UTIL
   // ...
-  get heightSquare => min(MediaQuery.of(context).size.height, MediaQuery.of(context).size.width) / 8;
-  get heightCode => SIZE_CODE + INSET_CODE*2;
-  get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
+  // ...
+  double get heightSquare => min(MediaQuery.of(context).size.height, MediaQuery.of(context).size.width) / 8;
+  double get heightNotation => SIZE_NOTATION + INSET_NOTATION*2;
+  double get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
+
+  bool get isLeftToMove => (isOrientationLight && game.isLightToMove);
 
   // STATE
   // ...
@@ -158,7 +165,7 @@ class WidgetGameState extends State<WidgetGame> {
               children: <Widget>[
                 widgetSide(),
                 accentBoard != null ? widgetCenter() : Container(),
-                widgetSide(isLeft: false),
+                widgetSide(atLeft: false),
               ],
               mainAxisAlignment: MainAxisAlignment.center,
             ),
@@ -166,9 +173,8 @@ class WidgetGameState extends State<WidgetGame> {
           ),
           isAlertShowing || isSettingsShowing ? widgetDim() : Container(),
           isAlertShowing ? widgetAlert() : Container(),
+          isSettingsShowing ? widgetSettings() : Container(),
           widgetIconSettings(),
-//          !isGameOngoing ? widgetIconSettings() : Container(),
-          isSettingsShowing ? widgetSettings() : Container()
         ],
       ),
     );
@@ -183,7 +189,7 @@ class WidgetGameState extends State<WidgetGame> {
       child: GestureDetector(
         child: Container(
           child: Icon(
-            Icons.settings,
+            !isSettingsShowing ? Icons.settings : Icons.close,
             color: Colors.white,
           ),
           padding: EdgeInsets.only(
@@ -193,7 +199,7 @@ class WidgetGameState extends State<WidgetGame> {
         ),
         onTap: () {
           setState(() {
-            isSettingsShowing = true;
+            isSettingsShowing = !isSettingsShowing;
           });
         },
       ),
@@ -211,7 +217,7 @@ class WidgetGameState extends State<WidgetGame> {
                 child: Center(
                   child: Container(
                       child: widgetTitle(
-                          isGameOngoing ? "end" : "new"
+                          isGameOngoing ? "End Game" : "New Game"
                       ),
                     margin: EdgeInsets.only(
                       top: INSET_VERTICAL_SHORT_SETTINGS,
@@ -227,6 +233,43 @@ class WidgetGameState extends State<WidgetGame> {
                   }
                 },
               ) : Container(),
+              Center(
+                  child: widgetTitle(
+                      "Orientation"
+                  )
+              ),
+              Center(
+                child: Container(
+                  child: Wrap(
+                    children: <Widget>[
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "light",
+                            isSelected: isOrientationLight
+                        ),
+                        onTap: () {
+                          this.isOrientationLight = true;
+                          displayPosition();
+                        },
+                      ),
+                      GestureDetector(
+                        child: widgetSettingSelection(
+                            title: "dark",
+                            isSelected: !isOrientationLight
+                        ),
+                        onTap: () {
+                          this.isOrientationLight = false;
+                          displayPosition();
+                        },
+                      ),
+                    ],
+                    spacing: 0,
+                  ),
+                  margin: EdgeInsets.only(
+                    top: INSET_VERTICAL_SHORT_SETTINGS,
+                  ),
+                ),
+              ),
               !isGameOngoing ? Center(
                   child: widgetTitle(
                       "Time"
@@ -286,43 +329,6 @@ class WidgetGameState extends State<WidgetGame> {
                   ),
                 ),
               ) : Container(),
-              Center(
-                  child: widgetTitle(
-                      "Orientation"
-                  )
-              ),
-              Center(
-                child: Container(
-                  child: Wrap(
-                    children: <Widget>[
-                      GestureDetector(
-                        child: widgetSettingSelection(
-                            title: "light",
-                            isSelected: isLightOrientation
-                        ),
-                        onTap: () {
-                          this.isLightOrientation = true;
-                          displayPosition();
-                        },
-                      ),
-                      GestureDetector(
-                        child: widgetSettingSelection(
-                            title: "dark",
-                            isSelected: !isLightOrientation
-                        ),
-                        onTap: () {
-                          this.isLightOrientation = false;
-                          displayPosition();
-                        },
-                      ),
-                    ],
-                    spacing: 0,
-                  ),
-                  margin: EdgeInsets.only(
-                    top: INSET_VERTICAL_SHORT_SETTINGS,
-                  ),
-                ),
-              ),
               Center(
                   child: widgetTitle(
                       "Show valid moves"
@@ -429,7 +435,8 @@ class WidgetGameState extends State<WidgetGame> {
         ),
         color: Colors.white,
         height: MediaQuery.of(context).size.height,
-        width: darkSpace/2,
+        width: MediaQuery.of(context).size.width,
+//        width: darkSpace/2,
       ),
     );
   }
@@ -461,14 +468,14 @@ class WidgetGameState extends State<WidgetGame> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.all(
             Radius.circular(
-                SIZE_SETTINGS_SUBTITLE/2
+                RADIUS_SELECTION_SETTINGS
             )
         ),
         color: isSelected ? colorPNGSelected : Colors.transparent,
       ),
       padding: EdgeInsets.symmetric(
-          horizontal: 4,
-          vertical: 2
+          horizontal: INSET_HORIZONTAL_SELECTION_SETTING,
+          vertical: INSET_VERTICAL_SELECTION_SETTING
       ),
     );
   }
@@ -545,20 +552,20 @@ class WidgetGameState extends State<WidgetGame> {
     );
   }
 
-  Widget widgetSide({bool isLeft = true}) {
+  Widget widgetSide({bool atLeft = true}) {
     return Expanded(
       child: Container(
         color: colorBackground1,
         child: Stack(
           children: <Widget>[
             timeTotalLight != null ? Align(
-              alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+              alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
                   child: Container(
                     child: Text(
-                      isLeft ? (isLightOrientation
+                      atLeft ? (isOrientationLight
                           ? getFormattedInterval(timeTotalLight)
                           : getFormattedInterval(timeTotalDark))
-                          : (!isLightOrientation ? getFormattedInterval(timeTotalLight)
+                          : (!isOrientationLight ? getFormattedInterval(timeTotalLight)
                           : getFormattedInterval(timeTotalDark)),
                       style: TextStyle(
                           color: Colors.white,
@@ -571,49 +578,46 @@ class WidgetGameState extends State<WidgetGame> {
                     ),
                   ),
             ) : Container(),
-            codes != null ? Align(
-              alignment: isLeft ? Alignment.bottomCenter : Alignment.topCenter,
+            notations != null ? Align(
+              alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
               child: Container(
                 child: GestureDetector(
                     child: LayoutBuilder(
                         builder: (context, constraints) {
-                          countMaxCodes = (constraints.maxHeight / heightCode).floor() - 2;
-                          var codesSideAll = (codes ?? []).asMap().entries.where((entry) {
-                            return isLeft ? (entry.key % 2 == (isLightOrientation ? 0 : 1))
-                                : entry.key % 2 == (!isLightOrientation ? 0 : 1);
-                          }).toList();
-                          var indexFirstCode = isLeft ? indexFirstCodeLeft : indexFirstCodeRight;
-                          var count = indexFirstCode + countMaxCodes - (indexFirstCode > 0 ? 1 : 0);
-                          var countLastCode = min(codesSideAll.length, count - (count < codesSideAll.length ? 1 : 0));
-                          var codesSideShown = codesSideAll.sublist(indexFirstCode, countLastCode);
+                          // set count notations
+                          if (countColumnChildrenMax == null) {
+                            countColumnChildrenMax = (constraints.maxHeight / heightNotation).floor() - 2;
+                          }
+                          var countNotations = getCountNotationsAll(atLeft: atLeft);
+                          var countNotationsMinned = min(countColumnChildrenMax, countNotations);
                           return Column(
-                            children: <Widget>[(indexFirstCode > 0 ? widgetCodeMore() : Container())]
-                                + codesSideShown.map<Widget>((entry) {
-                                  var code = entry.value;
-                                  var index = entry.key;
-                                  return widgetCode(code, index);
-                                }).toList()
-                                + <Widget>[countLastCode < codesSideAll.length ? widgetCodeMore() : Container()],
-                            verticalDirection: isLeft ? VerticalDirection.up : VerticalDirection.down,
+                            children: List.generate(countNotationsMinned, (index) => widgetNotation(index, atLeft)),
+                            verticalDirection: atLeft ? VerticalDirection.up : VerticalDirection.down,
                           );
                         }),
-                    onTapUp: (tap) {
-                      var yPosition = tap.globalPosition.dy;
-                      var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
-                      var indexChildren = max(0, yPositionNormal/heightCode).floor();
-                      var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
-                      if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+                    onPanStart: (pan) {
+                      var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
+                      var indexPosition = getIndexNotationFromIndexChildren(indexChildren, atLeft: atLeft);
+                      var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
+                      if (indexPosition != this.indexPosition) {
                         displayPosition(index: indexPosition);
                         setState(() {
+                          if (indexChildren == 0 && indexFirstNotation > 0) {
+                            setIndexPosition(indexFirstNotation - 1, atLeft: atLeft);
+                          }
+                          else if (indexChildren + 1 == countColumnChildrenMax && indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft)) {
+                            setIndexPosition(indexFirstNotation + 1, atLeft: atLeft);
+                          }
                           this.indexPosition = indexPosition;
                         });
-                      }},
+                      }
+                    },
                     onPanUpdate: (pan) {
                       var yPosition = pan.globalPosition.dy;
-                      var yPositionNormal = isLeft ? -1*(yPosition + INSET_CODES_START - MediaQuery.of(context).size.height) : yPosition - INSET_CODES_START;
-                      var heightChildren = SIZE_CODE + INSET_CODE*2;
+                      var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - MediaQuery.of(context).size.height) : yPosition - INSET_NOTATION_START;
+                      var heightChildren = SIZE_NOTATION + INSET_NOTATION*2;
                       var indexChildren = max(0, yPositionNormal/heightChildren).floor();
-                      var indexPosition = indexChildren*2 + (isLeft ? 1 : 2);
+                      var indexPosition = indexChildren*2 + (atLeft ? 1 : 2);
                       if (indexPosition != this.indexPosition && indexPosition < positions.length) {
                         displayPosition(index: indexPosition);
                         setState(() {
@@ -622,8 +626,8 @@ class WidgetGameState extends State<WidgetGame> {
                       }
                     }),
                 margin: EdgeInsets.only(
-                  top: !isLeft ? INSET_CODES_START : INSET_CODES_END,
-                  bottom: isLeft ? INSET_CODES_START : INSET_CODES_END,
+                  top: !atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
+                  bottom: atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
                 ),
               ),
             ) : Container()
@@ -866,47 +870,32 @@ class WidgetGameState extends State<WidgetGame> {
     );
   }
 
-  Widget widgetCode(String code, int index) {
-    var indexPosition = index + 1;
+  Widget widgetNotation(int index, bool atLeft) {
+    var indexPosition = getIndexNotationFromIndexChildren(index, atLeft: atLeft);
     var isSelected = indexPosition == this.indexPosition;
     return GestureDetector(
       child: Center(
         child: Container(
           child: Text(
-            code,
+            notation,
             style: TextStyle(
               color: Colors.white,
-              fontSize: SIZE_CODE,
+              fontSize: SIZE_NOTATION,
               fontWeight: FontWeight.normal,
             ),
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.all(
                 Radius.circular(
-                    RADIUS_CODE
+                    RADIUS_NOTATION
                 )
             ),
             color: isSelected ? colorPNGSelected : Colors.transparent,
           ),
           padding: EdgeInsets.all(
-              INSET_CODE
+              INSET_NOTATION
           ),
         ),
-      ),
-    );
-  }
-
-  Widget widgetCodeMore() {
-    return Container(
-      child: Text(
-        "···",
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: SIZE_CODE
-        ),
-      ),
-      padding: EdgeInsets.all(
-          INSET_CODE
       ),
     );
   }
@@ -955,13 +944,13 @@ class WidgetGameState extends State<WidgetGame> {
 
   Offset offsetFromSquare(Square square) {
     var dx = (square.column - 1) * heightSquare;
-    var dy = isLightOrientation ? (8 - square.row) * heightSquare : (square.row - 1) * heightSquare;
+    var dy = isOrientationLight ? (8 - square.row) * heightSquare : (square.row - 1) * heightSquare;
     return Offset(dx, dy);
   }
 
   Square squareFromOffset(Offset offset) {
     var column = (offset.dx / heightSquare + 1);
-    var row = (isLightOrientation ? -offset.dy / heightSquare + 9 : offset.dy / heightSquare + 1);
+    var row = (isOrientationLight ? -offset.dy / heightSquare + 9 : offset.dy / heightSquare + 1);
     return Square(column.floor(), row.floor());
   }
 
@@ -989,23 +978,20 @@ class WidgetGameState extends State<WidgetGame> {
 
   setupGame() async {
 
-    await Future.delayed(Duration(seconds: 2));
-
     game = Game.standard();
     timer = Timer.control(controlTimer);
 
     positions = [game.board];
     displayPosition();
 
-    squaresSelected = [];
-    squaresValid = [];
-    indexFirstCodeLeft = 0;
-    indexFirstCodeRight = 0;
-
     setState(() {
+      squaresSelected = [];
+      squaresValid = [];
+      indexFirstNotationLeft = 0;
+      indexFirstNotationRight = 0;
       isGameSetup = true;
       this.offsets = offsets;
-      codes = [];
+      notations = [];
       timeTotalLight = timer.timeTotal;
       timeTotalDark = timer.timeTotal;
     });
@@ -1051,11 +1037,17 @@ class WidgetGameState extends State<WidgetGame> {
     var movePNG = game.makeMove(move);
 
     if (movePNG != null) {
-
+      
+      var didLeftMoved = !isLeftToMove;
+      var indexFirstAtSide = getIndexFirstNotation(atLeft: didLeftMoved);
       setState(() {
-        codes.add(movePNG);
+        notations.add(movePNG);
+        var countCodesAll = getCountNotationsAll(atLeft: didLeftMoved);
+        if (indexFirstAtSide + countColumnChildrenMax < countCodesAll) {
+          setIndexPosition(indexFirstAtSide + 1, atLeft: didLeftMoved);
+        }
       });
-
+      
       var position = Map<Square, Piece>.from(game.board);
       positions.add(position);
 
@@ -1081,6 +1073,17 @@ class WidgetGameState extends State<WidgetGame> {
     return movePNG;
   }
 
+  Map<Piece, Offset> calculateOffsets(Map<Square, Piece> position) {
+    var map = Map.fromIterable(position.entries,
+        key: (entry) => entry.value as Piece,
+        value: (entry) {
+          var square = entry.key;
+          var offset = offsetFromSquare(square);
+          return offset;
+        });
+    return map;
+  }
+
   displayPosition({int index}) {
     index = index == null ? positions.length - 1 : index; // defaults to last position
     indexPosition = index;
@@ -1093,17 +1096,40 @@ class WidgetGameState extends State<WidgetGame> {
     });
   }
 
-  Map<Piece, Offset> calculateOffsets(Map<Square, Piece> position) {
-    var map = Map.fromIterable(position.entries,
-        key: (entry) => entry.value as Piece,
-        value: (entry) {
-          var square = entry.key;
-          var offset = offsetFromSquare(square);
-          return offset;
-        });
-    return map;
+  int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
+    var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - MediaQuery.of(context).size.height) : yPosition - INSET_NOTATION_START;
+    var indexChildren = max(0, yPositionNormal/heightNotation).floor();
+    return indexChildren;
   }
-  
+
+  int getIndexNotationFromIndexChildren(int indexChildren, {bool atLeft}) {
+    return getIndexFirstNotation(atLeft: atLeft) + indexChildren*2 + (atLeft ? 1 : 2);
+  }
+
+  int getIndexFirstNotation({bool atLeft}) {
+    return atLeft ? indexFirstNotationLeft : indexFirstNotationRight;
+  }
+
+  setIndexPosition(int index, {bool atLeft}) {
+    if (atLeft) {
+      indexFirstNotationLeft = index;
+    }
+    else {
+      indexFirstNotationRight = index;
+    }
+  }
+
+  int getCountNotationsAll({bool atLeft}) {
+    var doubleCountNotation = (notations ?? []).length / 2;
+    int countNotations;
+    if ((atLeft && isOrientationLight) || (!atLeft && !isOrientationLight)) {
+      countNotations = doubleCountNotation.ceil();
+    }
+    else {
+      countNotations = doubleCountNotation.floor();
+    }
+    return countNotations;
+  }
 
   String getAlertTitle() {
     if (game.state == StateGame.checkmateByBlack) {
