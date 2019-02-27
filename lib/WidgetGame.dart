@@ -946,8 +946,8 @@ class WidgetGameState extends State<WidgetGame> {
 
   getDefaults() async {
     var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
-    var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? Random().nextInt(ACCENTS.length - 1);
-    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? "light";
+    var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? 0; //Random().nextInt(ACCENTS.length - 1);
+    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? 0;
     setState(() {
       this.showsValidMoves = showsValidMoves;
       accentBoard = ACCENTS[indexAccent];
