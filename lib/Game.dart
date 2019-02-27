@@ -765,7 +765,7 @@ class Game {
   }
 
 
-  String makeMoveFromNotation(String notation) {
+  Move moveFromNotation(String notation) {
 
     if (notation == "") {
       print("");
@@ -837,6 +837,6 @@ class Game {
     }
 
     var move = Move(squareInitial, squareFinal);
-    return makeMove(move);
+    return move;
   }
 }

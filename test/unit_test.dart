@@ -14,8 +14,9 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMoveFromNotation(notation);
-      expect(isValid, true);
+      var move = game.moveFromNotation(notation);
+      notation = game.makeMove(move);
+      expect(notation != null, true);
     }
 
     expect(game.state, StateGame.ongoing);
@@ -29,8 +30,9 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMoveFromNotation(notation);
-      expect(isValid, true);
+      var move = game.moveFromNotation(notation);
+      notation = game.makeMove(move);
+      expect(notation != null, true);
     }
 
     expect(game.state, StateGame.checkmateByBlack);
@@ -44,8 +46,9 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var isValid = game.makeMoveFromNotation(notation);
-      expect(isValid, true);
+      var move = game.moveFromNotation(notation);
+      notation = game.makeMove(move);
+      expect(notation != null, true);
     }
 
     expect(game.state, StateGame.ongoing);
