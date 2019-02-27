@@ -981,7 +981,7 @@ class WidgetGameState extends State<WidgetGame> {
       timeTotalDark = timer.timeTotal;
     });
 
-    automateGame(animated: false);
+//    automateGame(animated: false);
   }
   
   startGame() {
