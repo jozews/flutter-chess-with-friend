@@ -64,7 +64,7 @@ class WidgetGameState extends State<WidgetGame> {
   static const SIZE_PIECE = 26.0;
 
   static const INSET_VERTICAL_TIME = 12.0;
-  static const INSET_NOTATION = 3.0;
+  static const INSET_NOTATION = 5.0;
   static const INSET_ALERT_TEXT = 25.0;
   static const INSET_NOTATION_START = 50.0;
   static const INSET_NOTATIONS_END = 5.0;
@@ -596,32 +596,59 @@ class WidgetGameState extends State<WidgetGame> {
                           );
                         }),
                     onPanStart: (pan) {
+
                       var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
-                      var indexPosition = getIndexNotationFromIndexChildren(indexChildren, atLeft: atLeft);
+                      var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
                       var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
+
                       if (indexPosition != this.indexPosition) {
+
                         displayPosition(index: indexPosition);
+
+                        var isPanInFirstChildren = indexChildren == 0;
+                        var isFirstNotationNotShowing = indexFirstNotation > 0;
+                        var shouldScrollDown = isPanInFirstChildren && isFirstNotationNotShowing;
+
+                        var isPanInLastChildren = indexChildren + 1 == countColumnChildrenMax;
+                        var isLastNotationNotShowing = indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft);
+                        var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
+
                         setState(() {
-                          if (indexChildren == 0 && indexFirstNotation > 0) {
+                          if (shouldScrollDown) {
                             setIndexPosition(indexFirstNotation - 1, atLeft: atLeft);
                           }
-                          else if (indexChildren + 1 == countColumnChildrenMax && indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft)) {
+                          else if (shouldScrollUp) {
                             setIndexPosition(indexFirstNotation + 1, atLeft: atLeft);
                           }
-                          this.indexPosition = indexPosition;
                         });
                       }
                     },
                     onPanUpdate: (pan) {
-                      var yPosition = pan.globalPosition.dy;
-                      var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - MediaQuery.of(context).size.height) : yPosition - INSET_NOTATION_START;
-                      var heightChildren = SIZE_NOTATION + INSET_NOTATION*2;
-                      var indexChildren = max(0, yPositionNormal/heightChildren).floor();
-                      var indexPosition = indexChildren*2 + (atLeft ? 1 : 2);
-                      if (indexPosition != this.indexPosition && indexPosition < positions.length) {
+
+                      var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
+                      var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
+
+                      if (indexPosition != this.indexPosition) {
+
                         displayPosition(index: indexPosition);
+
+                        var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
+
+                        var isPanInFirstChildren = indexChildren == 0;
+                        var isFirstNotationNotShowing = indexFirstNotation > 0;
+                        var shouldScrollDown = isPanInFirstChildren && isFirstNotationNotShowing;
+
+                        var isPanInLastChildren = indexChildren + 1 == countColumnChildrenMax;
+                        var isLastNotationNotShowing = indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft);
+                        var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
+
                         setState(() {
-                          this.indexPosition = indexPosition;
+                          if (shouldScrollDown) {
+                            setIndexPosition(indexFirstNotation - 1, atLeft: atLeft);
+                          }
+                          else if (shouldScrollUp) {
+                            setIndexPosition(indexFirstNotation + 1, atLeft: atLeft);
+                          }
                         });
                       }
                     }),
@@ -871,7 +898,9 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   Widget widgetNotation(int index, bool atLeft) {
-    var indexPosition = getIndexNotationFromIndexChildren(index, atLeft: atLeft);
+    var indexNotation = getIndexNotationFromIndexChildren(index, atLeft: atLeft);
+    var indexPosition = getIndexPositionFromIndexChildren(index, atLeft: atLeft);
+    var notation = notations[indexNotation];
     var isSelected = indexPosition == this.indexPosition;
     return GestureDetector(
       child: Center(
@@ -1098,12 +1127,16 @@ class WidgetGameState extends State<WidgetGame> {
 
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
     var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - MediaQuery.of(context).size.height) : yPosition - INSET_NOTATION_START;
-    var indexChildren = max(0, yPositionNormal/heightNotation).floor();
+    var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
 
   int getIndexNotationFromIndexChildren(int indexChildren, {bool atLeft}) {
-    return getIndexFirstNotation(atLeft: atLeft) + indexChildren*2 + (atLeft ? 1 : 2);
+    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? 0 : 1);
+  }
+
+  int getIndexPositionFromIndexChildren(int indexChildren, {bool atLeft}) {
+    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? 1 : 2);
   }
 
   int getIndexFirstNotation({bool atLeft}) {
