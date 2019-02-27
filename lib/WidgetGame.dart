@@ -589,9 +589,9 @@ class WidgetGameState extends State<WidgetGame> {
                             countColumnChildrenMax = (constraints.maxHeight / heightNotation).floor() - 2;
                           }
                           var countNotations = getCountNotationsAll(atLeft: atLeft);
-                          var countNotationsMinned = min(countColumnChildrenMax, countNotations);
+                          var countNotationsMin = min(countColumnChildrenMax, countNotations);
                           return Column(
-                            children: List.generate(countNotationsMinned, (index) => widgetNotation(index, atLeft)),
+                            children: List.generate(countNotationsMin, (index) => widgetNotation(index, atLeft)),
                             verticalDirection: atLeft ? VerticalDirection.up : VerticalDirection.down,
                           );
                         }),
