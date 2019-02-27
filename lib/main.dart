@@ -7,4 +7,4 @@ void main() {
   SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]).then((_) {
     runApp(App());
   });
-} 
+}

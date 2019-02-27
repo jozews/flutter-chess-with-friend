@@ -38,15 +38,15 @@ class WidgetGameState extends State<WidgetGame> {
     Colors.limeAccent,
   ];
   static const NAME_PIECES = [
-    "alpha",
-    "bases",
-    "classic",
     "light",
+    "classic",
+    "alpha",
     "modern",
-    "nature",
-    "neo",
     "space",
+    "nature",
     "wood",
+    "bases",
+    "neo",
     ""
   ];
   
@@ -75,7 +75,7 @@ class WidgetGameState extends State<WidgetGame> {
   static const INSET_HORIZONTAL_SELECTION_SETTING = 6.0;
   static const INSET_VERTICAL_SELECTION_SETTING = 3.0;
 
-  static const MILLISECONDS_DELAY_SCROLL = 1000;
+  static const MILLISECONDS_DELAY_SCROLL = 15;
 
   get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -947,7 +947,7 @@ class WidgetGameState extends State<WidgetGame> {
   getDefaults() async {
     var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
     var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? Random().nextInt(ACCENTS.length - 1);
-    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? 0;
+    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? "light";
     setState(() {
       this.showsValidMoves = showsValidMoves;
       accentBoard = ACCENTS[indexAccent];
@@ -981,7 +981,7 @@ class WidgetGameState extends State<WidgetGame> {
       timeTotalDark = timer.timeTotal;
     });
 
-//    automateGame(animated: false);
+//    automateGame();
   }
   
   startGame() {
@@ -1004,11 +1004,11 @@ class WidgetGameState extends State<WidgetGame> {
     });
   }
 
-  automateGame({bool animated, bool fast = true}) async {
+  automateGame({bool animated = false, bool fast = true}) async {
 
     await Future.delayed(Duration(seconds: 1));
 
-    var notations = "e4;d6;d4;Nf6;Nc3;g6;Be3;Bg7;Qd2;c6;f3;b5;Nge2;Nbd7;Bh6;Bxh6;Qxh6;Bb7;a3;e5;O-O-O;Qe7;Kb1;a6;Nc1;O-O-O;Nb3;exd4;Rxd4;c5;Rd1;Nb6;g3;Kb8;Na5;Ba8;Bh3;d5;Qf4;Ka7;Rhe1;d4;Nd5;Nbxd5;exd5;Qd6;Rxd4;cxd4;Re7;Kb6;Qxd4;Kxa5;b4;Ka4;Qc3;Qxd5;Ra7;Bb7;Rxb7;Qc4;Qxf6;Kxa3;Qxa6;Kxb4;c3;Kxc3;Qa1;Kd2;Qb2;Kd1;Bf1;Rd2;Rd7;Rxd7;Bxc4;bxc4;Qxh8;Rd3;Qa8;c3;Qa4;Ke1;f4;f5;Kc1;Rd2;Qa7";
+    var notations = "Nf3;Nf6;c4;g6;Nc3;Bg7;d4;O-O;Bf4;d5;Qb3;dxc4;Qxc4;c6;e4;Nbd7;Rd1;Nb6;Qc5;Bg4;Bg5;Na4;Qa3;Nxc3;bxc3;Nxe4;Bxe7;Qb6;Bc4;Nxc3;Bc5;Rfe8+;Kf1;Be6;Bxb6;Bxc4+;Kg1;Ne2+;Kf1;Nxd4+;Kg1;Ne2+;Kf1;Nc3+;Kg1;axb6;Qb4;Ra4;Qxb6;Nxd1;h3;Rxa2;Kh2;Nxf2;Re1;Rxe1;Qd8+;Bf8;Nxe1;Bd5;Nf3;Ne4;Qb8;b5;h4;h5;Ne5;Kg7;Kg1;Bc5+;Kf1;Ng3+;Ke1;Bb4+;Kd1;Bb3+;Kc1;Ne2+;Kb1;Nc3+;Kc1;Rc2#";
 
     for (String notation in notations.split(";")) {
       var move = game.moveFromNotation(notation);
@@ -1159,40 +1159,13 @@ class WidgetGameState extends State<WidgetGame> {
     if (shouldScrollDown || shouldScrollUp) {
       var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
       var indexFirstNotationUpdated = indexFirstNotation + (shouldScrollDown ? -1 : 1);
+      await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_SCROLL));
       setState(() {
         setIndexFirstNotation(indexFirstNotationUpdated, atLeft: atLeft);
       });
     }
 
   }
-
-//  startScrollingNotations({bool isDown, int indexChildren, bool atLeft}) async {
-//
-//    var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
-//    var indexFirstNotationUpdated = indexFirstNotation + (isDown ? -1 : 1);
-//    var indexPosition = this.indexPosition + (isDown ? -1 : 1);
-//
-//    var isFirstNotationShowing = indexFirstNotation == 0;
-//    var isLastNotationShowing = indexFirstNotation + countColumnChildrenMax >= getCountNotationsAll(atLeft: atLeft);
-//
-//    if ((isDown && isFirstNotationShowing) || (!isDown && isLastNotationShowing)) {
-//      indexChildrenScrolling = null;
-//    }
-//
-//    if (indexChildrenScrolling == null) {
-//      return;
-//    }
-//
-//    setState(() {
-//      setIndexFirstNotation(indexFirstNotationUpdated, atLeft: atLeft);
-//    });
-//
-//    await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_SCROLL));
-//
-//    displayPosition(index: indexPosition);
-//
-//    startScrollingNotations(isDown: isDown, indexChildren: indexChildrenScrolling, atLeft: atLeft);
-//  }
 
   String getAlertTitle() {
     if (game.state == StateGame.checkmateByBlack) {
