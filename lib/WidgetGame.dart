@@ -120,6 +120,11 @@ class WidgetGameState extends State<WidgetGame> {
   int indexFirstNotationRight;
   int countColumnChildrenMax;
 
+  // NOTATIONS INTERACTION
+  // ...
+  var areNotationsScrolling = false;
+  var millisecondsDelayScroll = 500;
+
   // BOOLS
   // ...
   var isAlertShowing = false;
@@ -599,28 +604,10 @@ class WidgetGameState extends State<WidgetGame> {
 
                       var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
                       var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
-                      var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
 
                       if (indexPosition != this.indexPosition) {
-
                         displayPosition(index: indexPosition);
-
-                        var isPanInFirstChildren = indexChildren == 0;
-                        var isFirstNotationNotShowing = indexFirstNotation > 0;
-                        var shouldScrollDown = isPanInFirstChildren && isFirstNotationNotShowing;
-
-                        var isPanInLastChildren = indexChildren + 1 == countColumnChildrenMax;
-                        var isLastNotationNotShowing = indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft);
-                        var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
-
-                        setState(() {
-                          if (shouldScrollDown) {
-                            setIndexPosition(indexFirstNotation - 1, atLeft: atLeft);
-                          }
-                          else if (shouldScrollUp) {
-                            setIndexPosition(indexFirstNotation + 1, atLeft: atLeft);
-                          }
-                        });
+                        scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
                       }
                     },
                     onPanUpdate: (pan) {
@@ -629,28 +616,12 @@ class WidgetGameState extends State<WidgetGame> {
                       var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
 
                       if (indexPosition != this.indexPosition) {
-
                         displayPosition(index: indexPosition);
-
-                        var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
-
-                        var isPanInFirstChildren = indexChildren == 0;
-                        var isFirstNotationNotShowing = indexFirstNotation > 0;
-                        var shouldScrollDown = isPanInFirstChildren && isFirstNotationNotShowing;
-
-                        var isPanInLastChildren = indexChildren + 1 == countColumnChildrenMax;
-                        var isLastNotationNotShowing = indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft);
-                        var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
-
-                        setState(() {
-                          if (shouldScrollDown) {
-                            setIndexPosition(indexFirstNotation - 1, atLeft: atLeft);
-                          }
-                          else if (shouldScrollUp) {
-                            setIndexPosition(indexFirstNotation + 1, atLeft: atLeft);
-                          }
-                        });
+                        scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
                       }
+                    },
+                    onPanEnd: (pan) {
+                      areNotationsScrolling = false;
                     }),
                 margin: EdgeInsets.only(
                   top: !atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
@@ -1024,12 +995,15 @@ class WidgetGameState extends State<WidgetGame> {
       timeTotalLight = timer.timeTotal;
       timeTotalDark = timer.timeTotal;
     });
+
+    playKasparov();
   }
   
   startGame() {
     setState(() {
       isGameOngoing = true;
     });
+    timer.addTimestampStart();
     timer.start().listen((time) {
       setState(() {
         timeTotalLight = timer.timeLight;
@@ -1045,6 +1019,18 @@ class WidgetGameState extends State<WidgetGame> {
     });
   }
 
+  playKasparov({bool fast = true}) async {
+
+    await Future.delayed(Duration(seconds: 1));
+
+    var notations = "e4;d6;d4;Nf6;Nc3;g6;Be3;Bg7;Qd2;c6;f3;b5;Nge2;Nbd7;Bh6;Bxh6;Qxh6;Bb7;a3;e5;O-O-O;Qe7;Kb1;a6;Nc1;O-O-O;Nb3;exd4;Rxd4;c5;Rd1;Nb6;g3;Kb8;Na5;Ba8;Bh3;d5;Qf4;Ka7;Rhe1;d4;Nd5;Nbxd5;exd5;Qd6;Rxd4;cxd4;Re7;Kb6;Qxd4;Kxa5;b4;Ka4;Qc3;Qxd5;Ra7;Bb7;Rxb7;Qc4;Qxf6;Kxa3;Qxa6;Kxb4;c3;Kxc3;Qa1;Kd2;Qb2;Kd1;Bf1;Rd2;Rd7;Rxd7;Bxc4;bxc4;Qxh8;Rd3;Qa8;c3;Qa4;Ke1;f4;f5;Kc1;Rd2;Qa7";
+
+    for (String notation in notations.split(";")) {
+      var isValid = makeMove(null, notation: notation);
+      await Future.delayed(Duration(milliseconds: fast ? 200 : 500));
+    }
+  }
+
   endGame() async  {
     displayPosition();
     timer.stop();
@@ -1056,37 +1042,43 @@ class WidgetGameState extends State<WidgetGame> {
     });
   }
 
-  String makeMove(Move move) {
+  String makeMove(Move move, {String notation}) {
 
     var isLastPosition = indexPosition == positions.length - 1;
     if (!isLastPosition) {
       return null;
     }
 
-    var movePNG = game.makeMove(move);
+    String movePNG;
+    if (notation != null) {
+      movePNG = game.makeMoveFromNotation(notation);
+    }
+    else {
+      movePNG = game.makeMove(move);
+    }
 
     if (movePNG != null) {
-      
+
       var didLeftMoved = !isLeftToMove;
       var indexFirstAtSide = getIndexFirstNotation(atLeft: didLeftMoved);
       setState(() {
         notations.add(movePNG);
         var countCodesAll = getCountNotationsAll(atLeft: didLeftMoved);
         if (indexFirstAtSide + countColumnChildrenMax < countCodesAll) {
-          setIndexPosition(indexFirstAtSide + 1, atLeft: didLeftMoved);
+          setIndexFirstNotation(indexFirstAtSide + 1, atLeft: didLeftMoved);
         }
       });
-      
+
       var position = Map<Square, Piece>.from(game.board);
       positions.add(position);
-
-      timer.addTimestampEnd();
-      timer.addTimestampStart();
 
       // start game
       if (game.moves.length == 1) {
         startGame();
       }
+
+      timer.addTimestampEnd();
+      timer.addTimestampStart();
 
       // show alert: CHECKMATE! or stalemate
       if (game.state != StateGame.ongoing) {
@@ -1143,7 +1135,7 @@ class WidgetGameState extends State<WidgetGame> {
     return atLeft ? indexFirstNotationLeft : indexFirstNotationRight;
   }
 
-  setIndexPosition(int index, {bool atLeft}) {
+  setIndexFirstNotation(int index, {bool atLeft}) {
     if (atLeft) {
       indexFirstNotationLeft = index;
     }
@@ -1162,6 +1154,52 @@ class WidgetGameState extends State<WidgetGame> {
       countNotations = doubleCountNotation.floor();
     }
     return countNotations;
+  }
+
+  scrollNotationsIfNeeded({int indexChildren, bool atLeft}) {
+
+    areNotationsScrolling = false;
+
+    var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
+
+    var isPanInFirstChildren = indexChildren == 0;
+    var isFirstNotationNotShowing = indexFirstNotation > 0;
+    var shouldScrollDown = isPanInFirstChildren && isFirstNotationNotShowing;
+
+    var isPanInLastChildren = indexChildren + 1 == countColumnChildrenMax;
+    var isLastNotationNotShowing = indexFirstNotation + countColumnChildrenMax < getCountNotationsAll(atLeft: atLeft);
+    var shouldScrollUp = isPanInLastChildren && isLastNotationNotShowing;
+
+    if (shouldScrollUp || shouldScrollDown) {
+      areNotationsScrolling = true;
+    }
+
+    setState(() {
+      if (shouldScrollDown) {
+        startScrollingNotations(isDown: true, indexChildren: indexChildren, atLeft: atLeft);
+      }
+      else if (shouldScrollUp) {
+        startScrollingNotations(isDown: false, indexChildren: indexChildren, atLeft: atLeft);
+      }
+    });
+  }
+
+  startScrollingNotations({bool isDown, int indexChildren, bool atLeft}) async {
+
+    var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
+
+    setState(() {
+      if (isDown) {
+        setIndexFirstNotation(indexFirstNotation - 1, atLeft: atLeft);
+      }
+      else {
+        setIndexFirstNotation(indexFirstNotation + 1, atLeft: atLeft);
+      }
+    });
+
+    await Future.delayed(Duration(milliseconds: millisecondsDelayScroll));
+
+    scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
   }
 
   String getAlertTitle() {

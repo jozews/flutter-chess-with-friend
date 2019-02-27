@@ -64,7 +64,7 @@ class Timer {
 
   var stopped = false;
 
-  var millisecondsTickPrecision = 50;
+  var millisecondsTickPrecision = 10;
 
   double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
   bool get isLightTicking => moves.length % 2 == 0;
@@ -84,22 +84,25 @@ class Timer {
   }
 
   tick() async {
-    while (true) {
-      await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
-      if (timestampStart != null) {
-        var timeUpdated = timeOnStart - (timestampNow - timestampStart);
-        var timeUpdatedMaxed = max(0.0, timeUpdated);
 
-        if (!stopped && timeUpdatedMaxed.ceil() != getTime(isLightTicking).ceil()) {
-          setTime(isLightTicking, timeUpdatedMaxed);
-          streamController.add(timeUpdatedMaxed);
-        }
-        if (stopped || timeUpdatedMaxed == 0.0) {
-          stop();
-          break;
-        }
+    if (timestampStart != null) {
+
+      var timeUpdated = timeOnStart - (timestampNow - timestampStart);
+      var timeUpdatedMaxed = max(0.0, timeUpdated);
+
+      if (!stopped && timeUpdatedMaxed.ceil() != getTime(isLightTicking).ceil()) {
+        setTime(isLightTicking, timeUpdatedMaxed);
+        streamController.add(timeUpdatedMaxed);
+      }
+      if (stopped || timeUpdatedMaxed == 0.0) {
+        stop();
+        return;
       }
     }
+
+    await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
+
+    tick();
   }
 
   addTimestampStart({double timestamp}) {
@@ -112,14 +115,22 @@ class Timer {
   }
 
   addTimestampEnd({double timestamp}) {
+
     var timestampEnd = timestamp ?? timestampNow;
+
     // update
-    var timeIncremented = timeOfTicking + incrementOnEnd;
+    var timeUpdated = timeOnStart - (timestampNow - timestampStart);
+    var timeUpdatedMaxed = max(0.0, timeUpdated);
+
+    var timeIncremented = timeUpdatedMaxed + incrementOnEnd;
     setTime(isLightTicking, timeIncremented);
+    streamController.add(timeIncremented);
+
     // add move
     var move = MoveTimer(timestampStart, timestampEnd);
     moves.add(move);
-    // stop tick
+
+    // halt tick
     timestampStart = null;
   }
 
