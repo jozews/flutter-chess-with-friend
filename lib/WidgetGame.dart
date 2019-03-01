@@ -564,7 +564,6 @@ class WidgetGameState extends State<WidgetGame> {
   Widget widgetSide({bool atLeft = true}) {
     return Expanded(
       child: Container(
-        color: colorBackground1,
         child: Stack(
           children: <Widget>[
             timeTotalLight != null ? Align(
@@ -623,6 +622,7 @@ class WidgetGameState extends State<WidgetGame> {
             ) : Container()
           ],
         ),
+        color: Colors.transparent,
       ),
     );
   }
