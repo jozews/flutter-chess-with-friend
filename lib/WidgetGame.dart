@@ -624,7 +624,7 @@ class WidgetGameState extends State<WidgetGame> {
             ) : Container()
           ],
         ),
-        color: Colors.transparent,
+        color: colorBackground1,
       ),
     );
   }
