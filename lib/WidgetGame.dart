@@ -1004,7 +1004,7 @@ class WidgetGameState extends State<WidgetGame> {
         timeTotalDark = timer.timeDark;
       });
       var isTimeOver = timeTotalLight == 0 || timeTotalDark == 0;
-      if (this.isAlertShowing != isTimeOver) {
+      if (game.state == StateGame.ongoing && isAlertShowing != isTimeOver) {
         endGame();
         setState(() {
           this.isAlertShowing = isTimeOver;
