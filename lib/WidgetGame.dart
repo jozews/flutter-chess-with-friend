@@ -950,6 +950,7 @@ class WidgetGameState extends State<WidgetGame> {
 
   setup() async {
     await getDefaults();
+    await Future.delayed(Duration(milliseconds: 500)); // wait a bit to make proper layout
     setupGame();
   }
 
