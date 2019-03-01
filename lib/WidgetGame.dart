@@ -141,7 +141,9 @@ class WidgetGameState extends State<WidgetGame> {
   // UTIL
   // ...
   // ...
-  double get heightSquare => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical) / 8;
+  double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
+  double get widthScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.horizontal);
+  double get heightSquare => heightScreen / 8;
   double get heightNotation => SIZE_NOTATION + INSET_NOTATION*2;
   double get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
 
@@ -443,8 +445,8 @@ class WidgetGameState extends State<WidgetGame> {
           color: colorBackground1,
         ),
         color: Colors.white,
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
+        height: heightScreen,
+        width: he,
 //        width: darkSpace/2,
       ),
     );
@@ -1105,7 +1107,7 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
-    var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - MediaQuery.of(context).size.height) : yPosition - INSET_NOTATION_START;
+    var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - heightScreen) : yPosition - INSET_NOTATION_START;
     var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
