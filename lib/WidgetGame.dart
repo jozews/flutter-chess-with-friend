@@ -160,24 +160,28 @@ class WidgetGameState extends State<WidgetGame> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: Stack(
-        children: <Widget>[
-          Container(
-            child: Row(
-              children: <Widget>[
-                widgetSide(),
-                accentBoard != null ? widgetCenter() : Container(),
-                widgetSide(atLeft: false),
-              ],
-              mainAxisAlignment: MainAxisAlignment.center,
-            ),
-            color: colorBackground2,
-          ),
-          isAlertShowing || isSettingsShowing ? widgetDim() : Container(),
-          isAlertShowing ? widgetAlert() : Container(),
-          isSettingsShowing ? widgetSettings() : Container(),
-          widgetIconSettings(),
-        ],
+      child: SafeArea(
+          left: true,
+          bottom: true,
+          child: Stack(
+            children: <Widget>[
+              Container(
+                child: Row(
+                  children: <Widget>[
+                    widgetSide(),
+                    accentBoard != null ? widgetCenter() : Container(),
+                    widgetSide(atLeft: false),
+                  ],
+                  mainAxisAlignment: MainAxisAlignment.center,
+                ),
+                color: colorBackground2,
+              ),
+              isAlertShowing || isSettingsShowing ? widgetDim() : Container(),
+              isAlertShowing ? widgetAlert() : Container(),
+              isSettingsShowing ? widgetSettings() : Container(),
+              widgetIconSettings(),
+            ],
+          )
       ),
     );
   }
