@@ -142,7 +142,7 @@ class WidgetGameState extends State<WidgetGame> {
   // ...
   // ...
   double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
-  double get widthScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.horizontal);
+  double get widthScreen => (MediaQuery.of(context).size.width - MediaQuery.of(context).padding.horizontal);
   double get heightSquare => heightScreen / 8;
   double get heightNotation => SIZE_NOTATION + INSET_NOTATION*2;
   double get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
