@@ -443,10 +443,12 @@ class WidgetGameState extends State<WidgetGame> {
             ],
           ),
           color: colorBackground1,
+          height: heightScreen,
+          width: widthScreen,
         ),
         color: Colors.white,
         height: heightScreen,
-        width: heightScreen,
+        width: widthScreen,
 //        width: darkSpace/2,
       ),
     );
