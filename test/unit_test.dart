@@ -14,7 +14,7 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.moveFromNotation(notation);
+      var move = game.defineMoveFromNotation(notation);
       notation = game.makeMove(move);
       expect(notation != null, true);
     }
@@ -30,7 +30,7 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.moveFromNotation(notation);
+      var move = game.defineMoveFromNotation(notation);
       notation = game.makeMove(move);
       expect(notation != null, true);
     }
@@ -46,7 +46,7 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.moveFromNotation(notation);
+      var move = game.defineMoveFromNotation(notation);
       notation = game.makeMove(move);
       expect(notation != null, true);
     }
