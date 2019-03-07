@@ -1,7 +1,7 @@
 
 import 'dart:core';
 import 'package:quiver/core.dart';
-git
+
 
 Map<Square, Piece> getPiecesStandard() {
     
