@@ -3,10 +3,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
 import 'Timer.dart';
 import 'Defaults.dart';
+import 'Nearby.dart';
 
 import 'ScrollBehavior.dart';
 
@@ -20,6 +22,8 @@ class WidgetGame extends StatefulWidget {
 
 
 class WidgetGameState extends State<WidgetGame> {
+
+  static const ID_SERVICE = "jozews";
 
   static const ACCENTS = [
     Colors.redAccent,
@@ -60,8 +64,8 @@ class WidgetGameState extends State<WidgetGame> {
   static const SIZE_TIME = 26.0;
   static const SIZE_SETTINGS_TITLE = 15.0;
   static const SIZE_SETTINGS_SUBTITLE = 14.0;
-  static const SIZE_ACCENT = 20.0;
-  static const SIZE_PIECE = 26.0;
+  static const SIZE_ACCENT = 30.0;
+  static const SIZE_PIECE = 35.0;
 
   static const INSET_VERTICAL_TIME = 12.0;
   static const INSET_NOTATION = 5.0;
@@ -156,8 +160,11 @@ class WidgetGameState extends State<WidgetGame> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIOverlays([]);
-    setup();
+    setupBoard();
+    setupConnection();
   }
+  
+  
 
   @override
   Widget build(BuildContext context) {
@@ -950,12 +957,19 @@ class WidgetGameState extends State<WidgetGame> {
     return Square(column.floor(), row.floor());
   }
 
-  setup() async {
+  setupBoard() async {
     await getDefaults();
-    await Future.delayed(Duration(milliseconds: 500)); // wait a bit to make proper layout
+    await Future.delayed(Duration(milliseconds: 1000)); // wait a bit to make proper layout
     setupGame();
   }
 
+  setupConnection() async {
+    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+    Nearby.startDiscovering(ID_SERVICE);
+    Nearby.startAdvertising("name", ID_SERVICE);
+  }
+  
+  
   getDefaults() async {
     var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
     var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? 0; //Random().nextInt(ACCENTS.length - 1);
@@ -1099,8 +1113,8 @@ class WidgetGameState extends State<WidgetGame> {
 
   displayPosition({int index}) {
     index = index == null ? positions.length - 1 : index; // defaults to last position
-    indexPosition = index;
-    var position = positions[index];
+    indexPosition = min(positions.length - 1, index);
+    var position = positions[indexPosition];
     var offsets = calculateOffsets(position);
     var moveLast = index > 0 && index - 1 < game.moves.length ? game.moves[index - 1] : null;
     setState(() {
@@ -1116,11 +1130,11 @@ class WidgetGameState extends State<WidgetGame> {
   }
 
   int getIndexNotationFromIndexChildren(int indexChildren, {bool atLeft}) {
-    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? 0 : 1);
+    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 0 : 1) : (isOrientationLight ? 1 : 0));
   }
 
   int getIndexPositionFromIndexChildren(int indexChildren, {bool atLeft}) {
-    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? 1 : 2);
+    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 1 : 2) : (isOrientationLight ? 2 : 1));
   }
 
   int getIndexFirstNotation({bool atLeft}) {
