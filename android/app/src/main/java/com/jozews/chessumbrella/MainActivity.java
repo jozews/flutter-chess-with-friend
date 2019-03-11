@@ -6,6 +6,10 @@ import android.os.Bundle;
 import io.flutter.plugins.GeneratedPluginRegistrant;
 import io.flutter.app.FlutterActivity;
 import io.flutter.plugin.common.*;
+import io.flutter.plugin.common.MethodCall;
+import io.flutter.plugin.common.MethodChannel;
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
+import io.flutter.plugin.common.MethodChannel.Result;
 
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.*;
@@ -119,7 +123,7 @@ class PayloadManager extends PayloadCallback implements EventChannel.StreamHandl
         HashMap map = new HashMap();
         map.put("type", 0);
         map.put("payload", payload);
-        eventSink.success(payload.toMap());
+        eventSink.success(map);
     }
 
     @Override
@@ -186,11 +190,16 @@ public class MainActivity extends FlutterActivity {
         handlerPayload = new PayloadManager(this);
         new EventChannel(getFlutterView(), nameChannelPayload).setStreamHandler(handlerDiscovery);
 
-        new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(
+        new MethodChannel(getFlutterView(), nameChannelSend).setMethodCallHandler(
                 new MethodCallHandler() {
                     @Override
                     public void onMethodCall(MethodCall call, Result result) {
-                        // TODO
+                        if (call.method.equals("sendPayload")) {
+                            ArrayList<Object> array = (ArrayList<Object>)call.arguments;
+                            String idEndpoint = (String)array.get(0);
+                            Payload payload = (Payload)array.get(1);
+                            sendPayload(idEndpoint, payload);
+                        }
                     }
                 });
     }
