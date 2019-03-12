@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Defaults {
 
+  static const AUTO_ROTATES = "auto_rotates";
   static const INDEX_ACCENT = "index_accent";
   static const INDEX_NAME_PIECES = "index_name_pieces";
   static const SHOWS_VALID_MOVES = "shows_valid_move";
