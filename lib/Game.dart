@@ -228,8 +228,18 @@ class Square {
   int row;
 
   Square(this.column, this.row);
-  
+
+  Square.fromInt(int i) {
+    this.column = i ~/ 10;
+    this.row = i % 10;
+  }
+
   bool get isLight => row % 2 != column % 2;
+
+  int toInt() {
+    return column*10 + row;
+  }
+
 
   @override
   String toString() {
@@ -256,6 +266,9 @@ class Move {
   String toString() {
     return "$square1 to $square2";
   }
+
+  bool operator ==(o) => o is Move && o.square1 == square1 && o.square2 == square2;
+  int get hashCode => hash2(square1, square2);
 }
 
 

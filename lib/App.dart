@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'WidgetGame.dart';
+import 'WidgetNearby.dart';
 
 class App extends StatelessWidget {
   // This widget is the root of your application.
@@ -13,7 +13,7 @@ class App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: WidgetGame(),
+      home: WidgetNearby(),
     );
   }
 }

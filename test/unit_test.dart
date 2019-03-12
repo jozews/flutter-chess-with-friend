@@ -1,8 +1,10 @@
 
+import 'dart:math';
+
 import 'package:test/test.dart';
 
 import 'package:chess_umbrella/Game.dart';
-
+import 'package:chess_umbrella/ActionNearby.dart';
 
 void main() {
 
@@ -52,5 +54,20 @@ void main() {
     }
 
     expect(game.state, StateGame.ongoing);
+  });
+
+  test('action nearby', () {
+
+    var move = Move(Square(0, 0), Square(1, 1));
+    var action1 = ActionNearby.moveEnd(move, 1.11111111111111);
+    var bytes1 = action1.toBytes();
+    var action2 = ActionNearby.fromBytes(bytes1);
+
+    expect(action1.type == action2.type, true);
+    expect(action1.move == action2.move, true);
+    expect((action1.timestampEnd - action2.timestampEnd).abs() < 0.00001, true);
+    expect(action1.timestampStart == action2.timestampStart, true);
+    expect(action1.control == action2.control, true);
+
   });
 }

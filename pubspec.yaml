@@ -10,6 +10,8 @@ environment:
 
 dependencies:
 
+  device_info: any
+
   flutter:
     sdk: flutter
 

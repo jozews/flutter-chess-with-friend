@@ -2,13 +2,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
 import 'Timer.dart';
 import 'Defaults.dart';
-import 'Nearby.dart';
 
 import 'ScrollBehavior.dart';
 
@@ -17,13 +14,11 @@ class WidgetGame extends StatefulWidget {
   WidgetGame({Key key}) : super(key: key);
 
   @override
-  WidgetGameState createState() => WidgetGameState();
+  StateWidgetGame createState() => StateWidgetGame();
 }
 
 
-class WidgetGameState extends State<WidgetGame> {
-
-  static const ID_SERVICE = "jozews";
+class StateWidgetGame extends State<WidgetGame> {
 
   static const ACCENTS = [
     Colors.redAccent,
@@ -64,8 +59,8 @@ class WidgetGameState extends State<WidgetGame> {
   static const SIZE_TIME = 26.0;
   static const SIZE_SETTINGS_TITLE = 15.0;
   static const SIZE_SETTINGS_SUBTITLE = 14.0;
-  static const SIZE_ACCENT = 30.0;
-  static const SIZE_PIECE = 35.0;
+  static const SIZE_ACCENT = .0;
+  static const SIZE_PIECE = 30.0;
 
   static const INSET_VERTICAL_TIME = 12.0;
   static const INSET_NOTATION = 5.0;
@@ -159,12 +154,8 @@ class WidgetGameState extends State<WidgetGame> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIOverlays([]);
     setupBoard();
-    setupConnection();
   }
-  
-  
 
   @override
   Widget build(BuildContext context) {
@@ -962,13 +953,6 @@ class WidgetGameState extends State<WidgetGame> {
     await Future.delayed(Duration(milliseconds: 1000)); // wait a bit to make proper layout
     setupGame();
   }
-
-  setupConnection() async {
-    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
-    Nearby.startDiscovering(ID_SERVICE);
-    Nearby.startAdvertising("name", ID_SERVICE);
-  }
-  
   
   getDefaults() async {
     var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
@@ -1028,6 +1012,10 @@ class WidgetGameState extends State<WidgetGame> {
         });
       }
     });
+  }
+
+  setIdEndpoint(String idEnpoint) {
+
   }
 
   automateGame({bool animated = false, bool fast = true}) async {
