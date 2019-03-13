@@ -22,14 +22,13 @@ class WidgetGame extends StatefulWidget {
 
 class StateWidgetGame extends State<WidgetGame> {
 
-
-  get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
   get colorBackground2 => Colors.white;
   get colorSelection => accentBoard.shade700.withAlpha((0.75 * 255).toInt());
   get colorSquareValid => accentBoard.shade400.withAlpha((0.95 * 255).toInt());
   get colorLastMove => colorSquareValid;
   get colorSquareCheck => Colors.red.withAlpha((0.75 * 255).toInt());
+  get colorTagSquare => accentBoard.shade700;
 
   // MODEL
   // ...
@@ -107,6 +106,9 @@ class StateWidgetGame extends State<WidgetGame> {
   double get widthSide => widthDark/2;
   double get widthWidgetTime => heightSquare*2;
   double get widthWidgetTimeItem => widthSide;
+
+  double get sizePiece => heightSquare * 9/10;
+  double get sizeDotSquareValid => heightSquare / 4;
 
   bool get isLeftToMove => (isOrientationLight && game.isLightToMove);
 
@@ -191,18 +193,20 @@ class StateWidgetGame extends State<WidgetGame> {
         child: ScrollConfiguration(
           behavior: ScrollBehaviorClean(),
           child: Stack(
-            children: [ widgetBoard() ] 
+            children: [ widgetBoard() ]
                 + (squaresSelected ?? []).map<Widget>((square) {
-                  return widgetSquareSelected(square);
+                  return widgetSquareOverlay(square, isSelected: true);
                 }).toList()
-                + (moveLast != null ? [widgetSquareLast(moveLast.square1), widgetSquareLast(moveLast.square2)] : [])
+                + (moveLast != null ? [
+                  widgetSquareOverlay(moveLast.square1, isLast: true), widgetSquareOverlay(moveLast.square2, isLast: true)
+                ] : [])
                 + (offsets != null ? offsets.entries.map<Widget>((entry) {
                         var piece = entry.key;
                         return widgetPiece(piece);
                       }).toList()
                     : [])
                 + (showsValidMoves ? (squaresValid ?? []).map<Widget>((square) {
-                  return widgetSquareValid(square);
+                  return widgetSquareValidOverlay(square);
                 }).toList() : []),
           ),
         ),
@@ -281,11 +285,29 @@ class StateWidgetGame extends State<WidgetGame> {
             crossAxisCount: 8,
             children: List.generate(64, (index) {
               var column = index ~/ 8;
-//              var row = 7 - (index % 8);
-//              var square = Square(column + 1, row + 1);
+              var row = 7 - (index % 8);
+              var square = Square(column + 1, row + 1);
+              var tag = getSquareTag(square);
               var color = (index % 2) != (column % 2) ? colorBoardDark : colorBoardLight;
               return Container(
-                  color: color
+                color: color,
+                child: tag != null ? Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Container(
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        color: colorTagSquare,
+                        fontSize: Const.SIZE_TAG_SQUARE,
+                        fontWeight: FontWeight.w400
+                      ),
+                    ),
+                    padding: EdgeInsets.only(
+                      left: Const.INSET_TAG_SQUARE,
+                      bottom: Const.INSET_TAG_SQUARE
+                    ),
+                  ),
+                ) : Container(),
               );
             }),
           ),
@@ -314,29 +336,30 @@ class StateWidgetGame extends State<WidgetGame> {
     var nameIsLight = piece.isLight ? "light" : "dark";
     var namePiece = "$nameTypePiece-$nameIsLight";
     var nameSet = Const.NAME_PIECES[indexNamePieces];
+    var offsetCorrection = (heightSquare - sizePiece)/2;
     return Positioned(
-      left: offsets[piece].dx,
-      top: offsets[piece].dy,
+      left: offsets[piece].dx + offsetCorrection,
+      top: offsets[piece].dy + offsetCorrection,
       child: IgnorePointer(
         child: Container(
           child: nameSet.isNotEmpty ? Image.asset(
               "sets/$nameSet/$namePiece.png"
           ) : Container(),
-          height: heightSquare * 1,
-          width: heightSquare * 1,
+          height: sizePiece,
+          width: sizePiece,
         ),
       ),
     );
   }
 
-  Widget widgetSquareSelected(Square square) {
+  Widget widgetSquareOverlay(Square square, {bool isSelected = false, bool isLast = false}) {
     var offset = offsetFromSquare(square);
     return Positioned(
       left: offset.dx,
       top: offset.dy,
       child: IgnorePointer(
         child: Container(
-          color: colorSelection,
+          color: isSelected ? colorSelection : colorSelection,
           height: heightSquare * 1,
           width: heightSquare * 1,
         ),
@@ -344,32 +367,18 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
-  Widget widgetSquareLast(Square square) {
+  Widget widgetSquareValidOverlay(Square square) {
     var offset = offsetFromSquare(square);
+    var offsetCorrection = (heightSquare - sizeDotSquareValid)/2;
     return Positioned(
-      left: offset.dx,
-      top: offset.dy,
-      child: IgnorePointer(
-        child: Container(
-          color: colorSelection,
-          height: heightSquare * 1,
-          width: heightSquare * 1,
-        ),
-      ),
-    );
-  }
-
-  Widget widgetSquareValid(Square square) {
-    var offset = offsetFromSquare(square);
-    return Positioned(
-      left: offset.dx + heightSquare*3/4/2,
-      top: offset.dy + heightSquare*3/4/2,
+      left: offset.dx + offsetCorrection,
+      top: offset.dy + offsetCorrection,
       child: ClipOval(
           child: IgnorePointer(
             child: Container(
               color: colorSquareValid,
-              height: heightSquare / 4,
-              width: heightSquare / 4,
+              height: sizeDotSquareValid,
+              width: sizeDotSquareValid,
             ),
           ),
       ),
@@ -398,7 +407,7 @@ class StateWidgetGame extends State<WidgetGame> {
                     Const.RADIUS_SOFT
                 )
             ),
-            color: isSelected ? colorPNGSelected : Colors.transparent,
+            color: isSelected ? Const.COLOR_SELECTED : Colors.transparent,
           ),
           padding: EdgeInsets.all(
               Const.INSET_NOTATION
@@ -863,6 +872,21 @@ class StateWidgetGame extends State<WidgetGame> {
     var column = (offset.dx / heightSquare + 1);
     var row = (isOrientationLight ? -offset.dy / heightSquare + 9 : offset.dy / heightSquare + 1);
     return Square(column.floor(), row.floor());
+  }
+  
+  String getSquareTag(Square square) {
+    var isFirstColumn = square.column == 1;
+    var isFirstRow = square.row == 1;
+    if (isFirstColumn && isFirstRow) {
+      return square.notation;
+    }
+    else if (square.column == 1) {
+      return square.notation.split("").last;
+    }
+    else if (square.row == 1) {
+      return square.notation.split("").first;
+    }
+    return null;
   }
 
   setupBoard() async {

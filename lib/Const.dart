@@ -18,6 +18,7 @@ class Const {
   static const SIZE_ACCENT = 25.0;
   static const SIZE_PIECE = 30.0;
   static const SIZE_PIECE_EMPTY = 25.0;
+  static const SIZE_TAG_SQUARE = 10.0;
 
   static const INSET_DIVISOR_ITEM_MENU = 12.0;
   static const INSET_VERTICAL_TIME = 12.0;
@@ -31,6 +32,7 @@ class Const {
   static const INSET_HORIZONTAL_SETTINGS = 6.0;
   static const INSET_HORIZONTAL_SELECTION = 8.0;
   static const INSET_VERTICAL_SELECTION = 4.0;
+  static const INSET_TAG_SQUARE = 2.0;
 
   static const MILLISECONDS_DELAY_SCROLL = 15;
 
