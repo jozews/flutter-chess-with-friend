@@ -13,7 +13,7 @@ class MoveTimer {
 }
 
 enum ControlTimer {
-  min3, min5, min10
+  min1, min1plus1, min3, min3plus2, min5, min5plus2, min10, min15
 }
 
 class Timer {
@@ -32,18 +32,43 @@ class Timer {
 
   Timer.control(this.control) {
     switch (control) {
+      case ControlTimer.min1:
+        timeTotal = 1*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 0.0;
+        break;
+      case ControlTimer.min1plus1:
+        timeTotal = 1*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 1.0;
+        break;
       case ControlTimer.min3:
         timeTotal = 3*60.0;
         incrementOnStart = 0.0;
         incrementOnEnd = 0.0;
+        break;
+      case ControlTimer.min3plus2:
+        timeTotal = 3*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 2.0;
         break;
       case ControlTimer.min5:
         timeTotal = 5*60.0;
         incrementOnStart = 0.0;
         incrementOnEnd = 0.0;
         break;
+      case ControlTimer.min5plus2:
+        timeTotal = 5*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 2.0;
+        break;
       case ControlTimer.min10:
         timeTotal = 10*60.0;
+        incrementOnStart = 0.0;
+        incrementOnEnd = 0.0;
+        break;
+      case ControlTimer.min15:
+        timeTotal = 15*60.0;
         incrementOnStart = 0.0;
         incrementOnEnd = 0.0;
         break;

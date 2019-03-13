@@ -5,7 +5,7 @@ import 'Game.dart';
 import 'Timer.dart';
 
 enum TypeActionNearby {
-  moveStart, moveEnd, timer, resign, draw
+  moveStart, moveEnd, timer, resign, draw, start
 }
 
 class ActionNearby {
@@ -82,6 +82,10 @@ class ActionNearby {
         byteData.setInt8(0, TypeActionNearby.values.indexOf(type));
         break;
       case TypeActionNearby.draw:
+        byteData = new ByteData(1);
+        byteData.setInt8(0, TypeActionNearby.values.indexOf(type));
+        break;
+      case TypeActionNearby.start:
         byteData = new ByteData(1);
         byteData.setInt8(0, TypeActionNearby.values.indexOf(type));
         break;

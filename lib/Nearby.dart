@@ -4,13 +4,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-typedef void CallbackConnectionInitiated(String idEndpoint, Map info);
-typedef void CallbackConnectionResult(String idEndpoint, int result);
-typedef void CallbackConnectionDisconnected(String idEndpoint);
-
-typedef void CallbackEndpointFound(String idEndpoint,  Map info);
-typedef void CallbackEndpointLost(String idEndpoint);
-
 
 enum TypeLifecycle {
   initiated, result, disconnected

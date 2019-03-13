@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'Game.dart';
 import 'Timer.dart';
 import 'Defaults.dart';
+import 'Const.dart';
+import 'Utils.dart';
 
-import 'ScrollBehavior.dart';
-
+import 'WidgetHistory.dart';
+import 'WidgetSettings.dart';
 
 class WidgetGame extends StatefulWidget {
   WidgetGame({Key key}) : super(key: key);
@@ -20,62 +22,6 @@ class WidgetGame extends StatefulWidget {
 
 class StateWidgetGame extends State<WidgetGame> {
 
-  static const ACCENTS = [
-    Colors.redAccent,
-    Colors.pinkAccent,
-    Colors.deepOrangeAccent,
-    Colors.orangeAccent,
-    Colors.amberAccent,
-    Colors.blueAccent,
-    Colors.deepPurpleAccent,
-    Colors.purpleAccent,
-    Colors.lightBlueAccent,
-    Colors.indigoAccent,
-    Colors.greenAccent,
-    Colors.lightGreenAccent,
-    Colors.tealAccent,
-    Colors.limeAccent,
-  ];
-  static const NAME_PIECES = [
-    "light",
-    "classic",
-    "alpha",
-    "modern",
-    "space",
-    "nature",
-    "wood",
-    "bases",
-    "neo",
-    ""
-  ];
-  
-  static const RADIUS_NOTATION = 5.0;
-  static const RADIUS_ALERT = 5.0;
-  static const RADIUS_DECORATION_ACCENT = 5.0;
-  static const RADIUS_DECORATION_NAME_PIECE = 25.0;
-  static const RADIUS_SELECTION_SETTINGS = 10.0;
-
-  static const SIZE_NOTATION = 19.0;
-  static const SIZE_TIME = 26.0;
-  static const SIZE_SETTINGS_TITLE = 15.0;
-  static const SIZE_SETTINGS_TITLE_HEADER = 16.0;
-  static const SIZE_SETTINGS_SUBTITLE = 14.0;
-  static const SIZE_ACCENT = 25.0;
-  static const SIZE_PIECE = 30.0;
-
-  static const INSET_VERTICAL_TIME = 12.0;
-  static const INSET_NOTATION = 5.0;
-  static const INSET_ALERT_TEXT = 25.0;
-  static const INSET_NOTATION_START = 50.0;
-  static const INSET_NOTATIONS_END = 5.0;
-  static const INSET_SETTINGS = 10.0;
-  static const INSET_VERTICAL_SETTINGS = 14.0;
-  static const INSET_VERTICAL_SHORT_SETTINGS = 7.0;
-  static const INSET_HORIZONTAL_SETTINGS = 6.0;
-  static const INSET_HORIZONTAL_SELECTION_SETTING = 6.0;
-  static const INSET_VERTICAL_SELECTION_SETTING = 3.0;
-
-  static const MILLISECONDS_DELAY_SCROLL = 15;
 
   get colorPNGSelected => Colors.white54;
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -128,9 +74,10 @@ class StateWidgetGame extends State<WidgetGame> {
   // BOOL
   // ...
   var isAlertShowing = false;
+  var isTimeShowing = false;
   var isGameSetup = false;
   var isGameOngoing = false;
-  var isSettingsShowing = false;
+  var isMenuShowing = false;
   var isOrientationLight = true;
 
   // SETTINGS
@@ -143,16 +90,33 @@ class StateWidgetGame extends State<WidgetGame> {
   // UTIL
   // ...
   // ...
+
+  bool get isConnected => idEnpoint != null;
+
   Color get colorBoardDark => accentBoard.shade200.withAlpha((0.8 * 255).toInt());
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
 
   double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
-  double get widthScreen => (MediaQuery.of(context).size.width - MediaQuery.of(context).padding.horizontal);
   double get heightSquare => heightScreen / 8;
-  double get heightNotation => SIZE_NOTATION + INSET_NOTATION*2;
-  double get darkSpace => MediaQuery.of(context).size.width - MediaQuery.of(context).size.height;
+  double get heightNotation => Const.SIZE_NOTATION + Const.INSET_NOTATION*2;
+  double get heightItemMenu => heightSquare;
+  double get heightWidgetTimeItem => heightSquare*2/3;
+
+  double get widthScreen => (MediaQuery.of(context).size.width - MediaQuery.of(context).padding.horizontal);
+  double get widthDark => widthScreen - heightScreen;
+  double get widthSide => widthDark/2;
+  double get widthWidgetTime => heightSquare*2;
+  double get widthWidgetTimeItem => widthSide;
 
   bool get isLeftToMove => (isOrientationLight && game.isLightToMove);
+
+  bool get shouldMenuShowItemNew => !isGameSetup && !isConnected;
+  bool get shouldMenuShowItemEnd => isGameOngoing && !isConnected;
+  bool get shouldMenuShowItemResign => isGameOngoing && isConnected;
+  bool get shouldMenuShowItemDraw => isGameOngoing && isConnected;
+  bool get shouldMenuShowItemTime => !isGameOngoing;
+  bool get shouldMenuShowItemHistory => !isGameOngoing && !isConnected;
+  bool get shouldShowDim => isAlertShowing || isMenuShowing || isTimeShowing;
 
   // STATE
   // ...
@@ -172,25 +136,25 @@ class StateWidgetGame extends State<WidgetGame> {
             bottom: true,
             child: Stack(
               children: <Widget>[
-                Container(
-                  child: Row(
-                    children: <Widget>[
-                      widgetSide(),
-                      accentBoard != null ? widgetCenter() : Container(),
-                      widgetSide(atLeft: false),
-                    ],
-                    mainAxisAlignment: MainAxisAlignment.center,
-                  ),
-                  color: colorBackground2,
+                Row(
+                  children: <Widget>[
+                    widgetSide(),
+                    accentBoard != null ? widgetCenter() : Container(),
+                    widgetSide(atLeft: false),
+                  ],
+                  mainAxisAlignment: MainAxisAlignment.center,
                 ),
-                isAlertShowing || isSettingsShowing ? widgetDim() : Container(),
+                shouldShowDim ? widgetDim() : Container(),
+                isMenuShowing ? widgetMenu() : Container(),
                 isAlertShowing ? widgetAlert() : Container(),
-                isSettingsShowing ? widgetSettings() : Container(),
-                widgetIconSettings(),
+                isTimeShowing ? widgetTime() : Container(),
+                widgetIconMenu(),
               ],
             )
         ),
         color: colorBackground1,
+        height: heightScreen,
+        width: widthScreen,
       ),
     );
   }
@@ -198,425 +162,25 @@ class StateWidgetGame extends State<WidgetGame> {
   // WIDGETS
   // ...
   // ...
-  Widget widgetIconSettings() {
+  Widget widgetIconMenu() {
     return Align(
       alignment: Alignment.topLeft,
       child: GestureDetector(
         child: Container(
           child: Icon(
-            !isSettingsShowing ? Icons.settings : Icons.close,
+            !isMenuShowing ? Icons.menu : null,
             color: Colors.white,
+            size: Const.SIZE_ICON_MENU,
           ),
           padding: EdgeInsets.only(
-            top: INSET_SETTINGS,
-            left: INSET_SETTINGS
+            top: Const.INSET_ICON_MENU,
+            left: Const.INSET_ICON_MENU
           ),
         ),
         onTap: () {
-          setState(() {
-            isSettingsShowing = !isSettingsShowing;
-          });
+          onTapIconMenu();
         },
       ),
-    );
-  }
-
-  Widget widgetSettings() {
-    return Container(
-        child: Container(
-          child: ListView(
-            children: <Widget>[
-              Center(
-                  child: widgetTitleSettings(
-                      "Game",
-                      header: true
-                  )
-              )
-            ] + widgetsAction() + widgetsTime() + <Widget>[
-              Center(
-                child: widgetTitleSettings(
-                    "Settings",
-                    header: true
-                ),
-              )
-            ] + widgetsShowValidMoves() + widgetsAutoRotates() + widgetsColors() + widgetsPieces(),
-          ),
-          color: colorBackground1,
-          height: heightScreen,
-          width: widthScreen,
-        ),
-        color: Colors.white,
-        height: heightScreen,
-        width: widthScreen,
-      );
-  }
-
-  List<Widget> widgetsAction() {
-    return [
-      isGameOngoing || !isGameSetup ? GestureDetector(
-        child: Center(
-          child: Container(
-            child: widgetTitleSettings(
-                isGameOngoing ? "End Game" : "New Game"
-            ),
-          ),
-        ),
-        onTap: () {
-          if (isGameOngoing) {
-            endGame();
-          }
-          else {
-            setupGame();
-          }
-        },
-      ) : Container(),
-    ];
-  }
-
-  List<Widget> widgetsColors() {
-    return [
-      Center(
-          child: widgetTitleSettings(
-              "Color"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: ACCENTS.map<Widget>((accent) {
-              return GestureDetector(
-                child: widgetAccent(
-                  accent,
-                  isSelected: accent == accentBoard,
-                ),
-                onTap: () {
-                  setState(() {
-                    accentBoard = accent;
-                  });
-                },
-              );
-            }).toList(),
-            spacing: 4,
-            runSpacing: 4,
-          ),
-          margin: EdgeInsets.only(
-            top: INSET_VERTICAL_SHORT_SETTINGS,
-            left: INSET_HORIZONTAL_SETTINGS,
-            right: INSET_HORIZONTAL_SETTINGS,
-          ),
-        ),
-      )
-    ];
-  }
-
-  List<Widget> widgetsShowValidMoves() {
-    return [
-      Center(
-          child: widgetTitleSettings(
-              "Show valid moves"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: <Widget>[
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "yes",
-                    isSelected: showsValidMoves
-                ),
-                onTap: () {
-                  this.showsValidMoves = true;
-                  displayPosition();
-                },
-              ),
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "no",
-                    isSelected: !showsValidMoves
-                ),
-                onTap: () {
-                  this.showsValidMoves = false;
-                  displayPosition();
-                },
-              ),
-            ],
-            spacing: 0,
-          ),
-          margin: EdgeInsets.only(
-            top: INSET_VERTICAL_SHORT_SETTINGS,
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> widgetsAutoRotates() {
-    return [
-      Center(
-          child: widgetTitleSettings(
-              "Auto rotates when disconnected"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: <Widget>[
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "yes",
-                    isSelected: autoRotates
-                ),
-                onTap: () {
-                  this.autoRotates = true;
-                },
-              ),
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "no",
-                    isSelected: !autoRotates
-                ),
-                onTap: () {
-                  this.autoRotates = false;
-                },
-              ),
-            ],
-            spacing: 0,
-          ),
-          margin: EdgeInsets.only(
-            top: INSET_VERTICAL_SHORT_SETTINGS,
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> widgetsTime() {
-    return <Widget>[
-      !isGameOngoing ? Center(
-          child: widgetTitleSettings(
-              "Time"
-          )
-      ) : Container(),
-      !isGameOngoing ? Center(
-        child: Container(
-          child: Wrap(
-            children: <Widget>[
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "3 min",
-                    isSelected: controlTimer == ControlTimer.min3
-                ),
-                onTap: () {
-                  controlTimer = ControlTimer.min3;
-                  timer = Timer.control(controlTimer);
-                  setState(() {
-                    timeTotalLight = timer.timeTotal;
-                    timeTotalDark = timer.timeTotal;
-                  });
-                },
-              ),
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "5 min",
-                    isSelected: controlTimer == ControlTimer.min5
-                ),
-                onTap: () {
-                  controlTimer = ControlTimer.min5;
-                  timer = Timer.control(controlTimer);
-                  setState(() {
-                    timeTotalLight = timer.timeTotal;
-                    timeTotalDark = timer.timeTotal;
-                  });
-                },
-              ),
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "10 min",
-                    isSelected: controlTimer == ControlTimer.min10
-                ),
-                onTap: () {
-                  controlTimer = ControlTimer.min10;
-                  timer = Timer.control(controlTimer);
-                  setState(() {
-                    timeTotalLight = timer.timeTotal;
-                    timeTotalDark = timer.timeTotal;
-                  });
-                },
-              ),
-            ],
-            spacing: 0,
-          ),
-          margin: EdgeInsets.only(
-            top: INSET_VERTICAL_SHORT_SETTINGS,
-          ),
-        ),
-      ) : Container(),
-    ];
-  }
-
-  List<Widget> widgetsOrientation() {
-    return <Widget>[
-      Center(
-          child: widgetTitleSettings(
-              "Orientation"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: <Widget>[
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "light",
-                    isSelected: isOrientationLight
-                ),
-                onTap: () {
-                  this.isOrientationLight = true;
-                  displayPosition();
-                },
-              ),
-              GestureDetector(
-                child: widgetSelectionSettings(
-                    title: "dark",
-                    isSelected: !isOrientationLight
-                ),
-                onTap: () {
-                  this.isOrientationLight = false;
-                  displayPosition();
-                },
-              ),
-            ],
-            spacing: 0,
-          ),
-          margin: EdgeInsets.only(
-            top: INSET_VERTICAL_SHORT_SETTINGS,
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> widgetsPieces() {
-    return <Widget>[
-      Center(
-          child: widgetTitleSettings(
-              "Pieces"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: NAME_PIECES.map<Widget>((namePiece) {
-              return GestureDetector(
-                child: widgetSetPiece(
-                  namePiece,
-                  isSelected: NAME_PIECES.indexOf(namePiece) == indexNamePieces,
-                ),
-                onTap: () {
-                  setState(() {
-                    indexNamePieces = NAME_PIECES.indexOf(namePiece);
-                  });
-                },
-              );
-            }).toList(),
-            spacing: 4,
-            runSpacing: 4,
-          ),
-          margin: EdgeInsets.only(
-              top: INSET_VERTICAL_SHORT_SETTINGS,
-              left: INSET_HORIZONTAL_SETTINGS,
-              right: INSET_HORIZONTAL_SETTINGS,
-              bottom: INSET_VERTICAL_SHORT_SETTINGS
-          ),
-        ),
-      )
-    ];
-  }
-
-  Widget widgetTitleSettings(String title, {bool header = false}) {
-    return Container(
-      child: Text(
-        title,
-        style: TextStyle(
-            color: Colors.white,
-            fontSize: header ? SIZE_SETTINGS_TITLE_HEADER : SIZE_SETTINGS_TITLE,
-            fontWeight: header ? FontWeight.w500 : FontWeight.w400
-        ),
-      ),
-      margin: EdgeInsets.only(
-          top: INSET_VERTICAL_SETTINGS
-      ),
-    );
-  }
-
-  Widget widgetSelectionSettings({String title, bool isSelected}) {
-    return Container(
-      child: Text(
-        title,
-        style: TextStyle(
-            color: Colors.white,
-            fontSize: SIZE_SETTINGS_SUBTITLE
-        ),
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(
-            Radius.circular(
-                RADIUS_SELECTION_SETTINGS
-            )
-        ),
-        color: isSelected ? colorPNGSelected : Colors.transparent,
-      ),
-      padding: EdgeInsets.symmetric(
-          horizontal: INSET_HORIZONTAL_SELECTION_SETTING,
-          vertical: INSET_VERTICAL_SELECTION_SETTING
-      ),
-    );
-  }
-
-  Widget widgetAccent(MaterialAccentColor accent, {bool isSelected}) {
-    return Container(
-      decoration: BoxDecoration(
-          border: Border.all(
-              color: isSelected ? Colors.white : Colors.transparent
-          ),
-          borderRadius: BorderRadius.all(
-            Radius.circular(
-                RADIUS_DECORATION_ACCENT
-            )
-        ),
-        color: accent.shade200,
-      ),
-      height: SIZE_ACCENT,
-      width: SIZE_ACCENT,
-    );
-  }
-
-  Widget widgetSetPiece(String namePiece, {bool isSelected}) {
-    return Container(
-      child: namePiece.isNotEmpty ? Image.asset(
-          "sets/$namePiece/king-light.png"
-      ) : Center(
-        child: Text(
-          "?",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.0
-          ),
-        ),
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(
-            color: isSelected ? Colors.white : Colors.transparent
-        ),
-        borderRadius: BorderRadius.all(
-            Radius.circular(
-                RADIUS_DECORATION_NAME_PIECE
-            )
-        ),
-      ),
-      height: SIZE_PIECE,
-      width: SIZE_PIECE,
     );
   }
 
@@ -662,12 +226,12 @@ class StateWidgetGame extends State<WidgetGame> {
                           : getFormattedInterval(timeTotalDark)),
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: SIZE_TIME,
+                          fontSize: Const.SIZE_TIME,
                           fontWeight: FontWeight.w500
                       ),
                     ),
                     margin: EdgeInsets.symmetric(
-                        vertical: INSET_VERTICAL_TIME
+                        vertical: Const.INSET_VERTICAL_TIME
                     ),
                   ),
             ) : Container(),
@@ -696,18 +260,15 @@ class StateWidgetGame extends State<WidgetGame> {
                       var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
                       panOnIndexChildren(indexChildren: indexChildren, atLeft: atLeft);
                     },
-                    onPanEnd: (pan) {
-
-                    }),
+                ),
                 margin: EdgeInsets.only(
-                  top: !atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
-                  bottom: atLeft ? INSET_NOTATION_START : INSET_NOTATIONS_END,
+                  top: !atLeft ? Const.INSET_NOTATION_START : Const.INSET_NOTATIONS_END,
+                  bottom: atLeft ? Const.INSET_NOTATION_START : Const.INSET_NOTATIONS_END,
                 ),
               ),
             ) : Container()
           ],
         ),
-        color: colorBackground1,
       ),
     );
   }
@@ -728,150 +289,20 @@ class StateWidgetGame extends State<WidgetGame> {
               );
             }),
           ),
-          onTapCancel: () {
-
-          },
           onTapDown: (tap) {
-            var isLastPosition = indexPosition == positions.length - 1;
-            if (!isLastPosition || !isGameSetup) {
-              return;
-            }
-            var offset = offsetFromGlobalPosition(tap.globalPosition);
-            var square = squareFromOffset(offset);
-            var piece = positions.last[square];
-            if (squaresSelected.isEmpty && piece != null) {
-              var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
-              setState(() {
-                squaresSelected = [square];
-                this.squaresValid = squaresValid;
-              });
-            }
-            else if (squaresSelected.isNotEmpty) {
-              var isSquareValid = squaresValid.contains(square);
-              if (isSquareValid) {
-                setState(() {
-                  squaresSelected.add(square);
-                });
-              }
-              else if (piece != null) {
-                var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
-                setState(() {
-                  squaresSelected = [square];
-                  this.squaresValid = squaresValid;
-                });
-              }
-              else {
-                setState(() {
-                  squaresSelected = [];
-                  squaresValid = [];
-                });
-              }
-            }
+            onTapDownBoard(tap);
           },
           onTapUp: (tap) {
-            var isLastPosition = indexPosition == positions.length - 1;
-            if (!isLastPosition || !isGameSetup) {
-              return;
-            }
-            if (squaresSelected.length == 2) {
-              var move = Move(squaresSelected.first, squaresSelected.last);
-              var _ = makeMove(move);
-              if (_ != null) {
-                setState(() {
-                  squaresSelected = [];
-                  squaresValid = [];
-                });
-              }
-            }
+            onTapUpBoard(tap);
           },
           onPanStart: (pan) {
-            var isLastPosition = indexPosition == positions.length - 1;
-            if (!isLastPosition || !isGameSetup) {
-              return;
-            }
-            var offset = offsetFromGlobalPosition(pan.globalPosition);
-            var square = squareFromOffset(offset);
-            var piece = positions.last[square];
-            if (piece != null) {
-              var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
-              piecePanning = positions.last[square];
-              var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
-              setState(() {
-                squaresSelected = [square];
-                offsets[piecePanning] = offsetCentered;
-                this.squaresValid = squaresValid;
-              });
-            }
-            else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
-              setState(() {
-                squaresSelected = [squaresSelected.first, square];
-              });
-            }
+            onPanStartBoard(pan);
           },
           onPanUpdate: (pan) {
-            var isLastPosition = indexPosition == positions.length - 1;
-            if (!isLastPosition || !isGameSetup) {
-              return;
-            }
-            var offset = offsetFromGlobalPosition(pan.globalPosition);
-            var square = squareFromOffset(offset);
-            if (piecePanning != null) {
-              var offset = offsets[piecePanning];
-              var offsetUpdated = Offset(offset.dx + pan.delta.dx, offset.dy + pan.delta.dy);
-              var squaresSelected = List<Square>.from(this.squaresSelected);
-              if (squaresValid.contains(square) && squaresSelected.last != square) {
-                squaresSelected = [squaresSelected.first, square];
-              }
-              else if (!squaresValid.contains(square)) {
-                squaresSelected = [squaresSelected.first];
-              }
-              setState(() {
-                offsets[piecePanning] = offsetUpdated;
-                this.squaresSelected = squaresSelected;
-              });
-            }
-            else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
-              if (squaresValid.contains(square)) {
-                setState(() {
-                  squaresSelected = [squaresSelected.first, square];
-                });
-              }
-              else {
-                setState(() {
-                  squaresSelected = [squaresSelected.first];
-                });
-              }
-            }
+            onPanUpdateBoard(pan);
           },
           onPanEnd: (pan) {
-            var isLastPosition = indexPosition == positions.length - 1;
-            if (!isLastPosition || !isGameSetup) {
-              return;
-            }
-            if (squaresSelected.isNotEmpty && piecePanning != null) {
-              var offset = offsets[piecePanning];
-              var offsetCentered = Offset(offset.dx + heightSquare/2, offset.dy + heightSquare/2);
-              var square2 = squareFromOffset(offsetCentered);
-              var move = Move(squaresSelected.first, square2);
-              var _ = makeMove(move);
-              if (_ != null) {
-                setState(() {
-                  squaresSelected = [];
-                  squaresValid = [];
-                });
-              }
-              piecePanning = null;
-            }
-            else if (squaresSelected.length == 2) {
-              var move = Move(squaresSelected.first, squaresSelected.last);
-              var _ = makeMove(move);
-              if (_ != null) {
-                setState(() {
-                  squaresSelected = [];
-                  squaresValid = [];
-                });
-              }
-            }
+            onPanEndBoard(pan);
           }
       ),
       color: Colors.white,
@@ -882,7 +313,7 @@ class StateWidgetGame extends State<WidgetGame> {
     var nameTypePiece = piece.type.toString().replaceFirst("TypePiece.", "");
     var nameIsLight = piece.isLight ? "light" : "dark";
     var namePiece = "$nameTypePiece-$nameIsLight";
-    var nameSet = NAME_PIECES[indexNamePieces];
+    var nameSet = Const.NAME_PIECES[indexNamePieces];
     return Positioned(
       left: offsets[piece].dx,
       top: offsets[piece].dy,
@@ -957,66 +388,469 @@ class StateWidgetGame extends State<WidgetGame> {
             notation,
             style: TextStyle(
               color: Colors.white,
-              fontSize: SIZE_NOTATION,
+              fontSize: Const.SIZE_NOTATION,
               fontWeight: FontWeight.normal,
             ),
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.all(
                 Radius.circular(
-                    RADIUS_NOTATION
+                    Const.RADIUS_SOFT
                 )
             ),
             color: isSelected ? colorPNGSelected : Colors.transparent,
           ),
           padding: EdgeInsets.all(
-              INSET_NOTATION
+              Const.INSET_NOTATION
           ),
         ),
       ),
     );
   }
 
+  Widget widgetMenu() {
+    return Container(
+      child: Container(
+        child: ListView(
+          children: <Widget>[
+            shouldMenuShowItemNew ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "new"
+              ),
+              onTap: () {
+                onTapItemMenuNew();
+              },
+            ) : Container(),
+            shouldMenuShowItemEnd ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "end"
+              ),
+              onTap: () {
+                onTapItemMenuEnd();
+              },
+            ) : Container(),
+            shouldMenuShowItemResign ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "resign"
+              ),
+              onTap: () {
+                onTapItemMenuResign();
+              },
+            ) : Container(),
+            shouldMenuShowItemDraw ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "draw"
+              ),
+              onTap: () {
+                onTapItemMenuDraw();
+              },
+            ) : Container(),
+            shouldMenuShowItemTime ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "time"
+              ),
+              onTap: () {
+                onTapItemMenuTime();
+                },
+            ) : Container(),
+            shouldMenuShowItemHistory ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "history"
+              ),
+              onTap: () {
+                onTapItemMenuHistory();
+              },
+            ) : Container(),
+            GestureDetector(
+              child: widgetItemMenu(
+                  title: "board"
+              ),
+              onTap: () {
+                onTapItemMenuBoard();
+              },
+            ),
+          ],
+        ),
+        color: colorBackground1,
+        height: heightScreen,
+        width: widthSide,
+      ),
+      color: colorBackground2,
+      height: heightScreen,
+      width: widthSide,
+    );
+  }
+
+  Widget widgetItemMenu({String title}) {
+    return Container(
+      child: Stack(
+        children: <Widget>[
+          Align(
+            alignment: Alignment.center,
+            child: Text(
+              title,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: Const.SIZE_TITLE,
+                  fontWeight: FontWeight.w400
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Container(
+              color: Colors.white,
+              height: Const.SIZE_DIVISOR,
+              width: widthSide - Const.INSET_DIVISOR_ITEM_MENU,
+            ),
+          ),
+        ],
+      ),
+      height: heightItemMenu,
+    );
+  }
+
   Widget widgetAlert() {
     return Center(
-      child: Container(
-        child: Text(getAlertTitle()),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(
-              Radius.circular(
-                  RADIUS_ALERT
-              )
-          ),
-          color: Colors.white,
+      child: ClipRRect(
+        borderRadius: BorderRadius.all(
+          Radius.circular(
+            Const.RADIUS_SOFT
+          )
         ),
-        padding: EdgeInsets.all(INSET_ALERT_TEXT),
+        child: Container(
+          child: Container(
+            child: Text(
+              getAlertTitle(),
+              style: TextStyle(
+                  color: Colors.white
+              ),
+            ),
+            color: colorBackground1,
+            padding: EdgeInsets.all(Const.INSET_ALERT_TEXT),
+          ),
+          color: colorBackground2,
+        ),
       ),
+    );
+  }
+
+  Widget widgetTime() {
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.all(
+          Radius.circular(
+            Const.RADIUS_SOFT
+          )
+        ),
+        child: Container(
+          child: Container(
+            child: Column(
+              children: ControlTimer.values.map<Widget>((control) {
+                return GestureDetector(
+                  child: Container(
+                    child: widgetItemTime(
+                        control
+                    ),
+                    height: heightWidgetTimeItem,
+                  ),
+                  onTap: () {
+                    onTapItemTimeControl(control);
+                  },
+                );
+              }).toList(),
+              mainAxisSize: MainAxisSize.min,
+            ),
+            color: colorBackground1,
+          ),
+          color: colorBackground2,
+          width: widthWidgetTimeItem,
+        ),
+      ),
+    );
+  }
+
+  Widget widgetItemTime(ControlTimer control) {
+    String title;
+    switch (control) {
+      case ControlTimer.min1:
+        title = "1 min";
+        break;
+      case ControlTimer.min1plus1:
+        title = "1 min and 1 bonus";
+        break;
+      case ControlTimer.min3:
+        title = "3 min";
+        break;
+      case ControlTimer.min3plus2:
+        title = "3 min and 2 bonus";
+        break;
+      case ControlTimer.min5:
+        title = "5 min";
+        break;
+      case ControlTimer.min5plus2:
+        title = "5 min and 2 bonus";
+        break;
+      case ControlTimer.min10:
+        title = "10 min";
+        break;
+      case ControlTimer.min15:
+        title = "15 min";
+        break;
+    }
+    return Stack(
+      children: <Widget>[
+        Align(
+          alignment: Alignment.center,
+          child: Text(
+            title,
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: Const.SIZE_SUBTITLE,
+                fontWeight: FontWeight.w400
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            color: Colors.white,
+            height: Const.SIZE_DIVISOR,
+            width: widthSide - Const.INSET_DIVISOR_ITEM_MENU,
+          ),
+        ),
+      ],
     );
   }
 
   Widget widgetDim() {
     return GestureDetector(
       child: Container(
-        color: Colors.black45,
+        color: Colors.black54,
       ),
       onTap: () {
-        // set defaults upon closing settings
-        if (isSettingsShowing) {
-          setDefaults();
-        }
-        setState(() {
-          isSettingsShowing = false;
-          isAlertShowing = false;
-        });
+        onTapDim();
       },
     );
   }
 
+  // ACTIONS
+  // ...
+  // ...
+  onTapDownBoard(TapDownDetails tap) {
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition || !isGameSetup) {
+      return;
+    }
+    var offset = offsetFromGlobalPosition(tap.globalPosition);
+    var square = squareFromOffset(offset);
+    var piece = positions.last[square];
+    if (squaresSelected.isEmpty && piece != null) {
+      var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      setState(() {
+        squaresSelected = [square];
+        this.squaresValid = squaresValid;
+      });
+    }
+    else if (squaresSelected.isNotEmpty) {
+      var isSquareValid = squaresValid.contains(square);
+      if (isSquareValid) {
+        setState(() {
+          squaresSelected.add(square);
+        });
+      }
+      else if (piece != null) {
+        var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+        setState(() {
+          squaresSelected = [square];
+          this.squaresValid = squaresValid;
+        });
+      }
+      else {
+        setState(() {
+          squaresSelected = [];
+          squaresValid = [];
+        });
+      }
+    }
+  }
+
+  onTapUpBoard(TapUpDetails tap) {
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition || !isGameSetup) {
+      return;
+    }
+    if (squaresSelected.length == 2) {
+      var move = Move(squaresSelected.first, squaresSelected.last);
+      var _ = makeMove(move);
+      if (_ != null) {
+        setState(() {
+          squaresSelected = [];
+          squaresValid = [];
+        });
+      }
+    }
+  }
+
+  onPanStartBoard(DragStartDetails pan) {
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition || !isGameSetup) {
+      return;
+    }
+    var offset = offsetFromGlobalPosition(pan.globalPosition);
+    var square = squareFromOffset(offset);
+    var piece = positions.last[square];
+    if (piece != null) {
+      var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      piecePanning = positions.last[square];
+      var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
+      setState(() {
+        squaresSelected = [square];
+        offsets[piecePanning] = offsetCentered;
+        this.squaresValid = squaresValid;
+      });
+    }
+    else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
+      setState(() {
+        squaresSelected = [squaresSelected.first, square];
+      });
+    }
+  }
+
+  onPanUpdateBoard(DragUpdateDetails pan) {
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition || !isGameSetup) {
+      return;
+    }
+    var offset = offsetFromGlobalPosition(pan.globalPosition);
+    var square = squareFromOffset(offset);
+    if (piecePanning != null) {
+      var offset = offsets[piecePanning];
+      var offsetUpdated = Offset(offset.dx + pan.delta.dx, offset.dy + pan.delta.dy);
+      var squaresSelected = List<Square>.from(this.squaresSelected);
+      if (squaresValid.contains(square) && squaresSelected.last != square) {
+        squaresSelected = [squaresSelected.first, square];
+      }
+      else if (!squaresValid.contains(square)) {
+        squaresSelected = [squaresSelected.first];
+      }
+      setState(() {
+        offsets[piecePanning] = offsetUpdated;
+        this.squaresSelected = squaresSelected;
+      });
+    }
+    else if (squaresSelected.isNotEmpty && squaresSelected.last != square) {
+      if (squaresValid.contains(square)) {
+        setState(() {
+          squaresSelected = [squaresSelected.first, square];
+        });
+      }
+      else {
+        setState(() {
+          squaresSelected = [squaresSelected.first];
+        });
+      }
+    }
+  }
+
+  onPanEndBoard(DragEndDetails pan) {
+    var isLastPosition = indexPosition == positions.length - 1;
+    if (!isLastPosition || !isGameSetup) {
+      return;
+    }
+    if (squaresSelected.isNotEmpty && piecePanning != null) {
+      var offset = offsets[piecePanning];
+      var offsetCentered = Offset(offset.dx + heightSquare/2, offset.dy + heightSquare/2);
+      var square2 = squareFromOffset(offsetCentered);
+      var move = Move(squaresSelected.first, square2);
+      var _ = makeMove(move);
+      if (_ != null) {
+        setState(() {
+          squaresSelected = [];
+          squaresValid = [];
+        });
+      }
+      piecePanning = null;
+    }
+    else if (squaresSelected.length == 2) {
+      var move = Move(squaresSelected.first, squaresSelected.last);
+      var _ = makeMove(move);
+      if (_ != null) {
+        setState(() {
+          squaresSelected = [];
+          squaresValid = [];
+        });
+      }
+    }
+  }
+
+  onTapDim() {
+    setState(() {
+      if (isAlertShowing) {
+        isAlertShowing = false;
+      }
+      else if (isTimeShowing) {
+        isTimeShowing = false;
+      }
+      else if (isMenuShowing) {
+        isMenuShowing = false;
+      }
+    });
+  }
+
+  onTapIconMenu() {
+    setState(() {
+      isTimeShowing = false;
+      isMenuShowing = !isMenuShowing;
+    });
+  }
+
+  onTapItemMenuNew() {
+    setupGame();
+  }
+
+  onTapItemMenuEnd() {
+    endGame();
+  }
+
+  onTapItemMenuResign() {
+//    resignGame();
+  }
+
+  onTapItemMenuDraw() {
+//    drawGame();
+  }
+
+  onTapItemMenuTime() {
+    setState(() {
+      this.isMenuShowing = false;
+      this.isTimeShowing = true;
+    });
+  }
+
+  onTapItemMenuHistory() {
+    pushHistory();
+  }
+
+  onTapItemMenuBoard() {
+    pushBoard();
+  }
+
+  onTapItemTimeControl(ControlTimer controlTimer) {
+    this.controlTimer = controlTimer;
+    this.timer = Timer.control(this.controlTimer);
+    setState(() {
+      this.isTimeShowing = false;
+      timeTotalLight = timer.timeLight;
+      timeTotalDark = timer.timeDark;
+    });
+  }
+  
   // UTIL
   // ...
   // ...
   Offset offsetFromGlobalPosition(Offset position) {
-    return Offset(position.dx - (darkSpace/2), position.dy);
+    return Offset(position.dx - (widthDark/2), position.dy);
   }
 
   Offset offsetFromSquare(Square square) {
@@ -1033,7 +867,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   setupBoard() async {
     await getDefaults();
-    await Future.delayed(Duration(milliseconds: 1000)); // wait a bit to make proper layout
+    await Future.delayed(Duration(milliseconds: 1250)); // wait a bit to make proper layout
     setupGame();
   }
   
@@ -1046,17 +880,10 @@ class StateWidgetGame extends State<WidgetGame> {
 
     setState(() {
       this.showsValidMoves = showsValidMoves;
-      accentBoard = ACCENTS[indexAccent];
+      accentBoard = Const.ACCENTS[indexAccent];
       this.indexNamePieces = indexNamePieces;
       this.autoRotates = autoRotates;
     });
-  }
-
-  setDefaults() async {
-    await Defaults.setBool(Defaults.SHOWS_VALID_MOVES, showsValidMoves);
-    await Defaults.setInt(Defaults.INDEX_ACCENT, ACCENTS.indexOf(accentBoard));
-    await Defaults.setInt(Defaults.INDEX_NAME_PIECES, indexNamePieces);
-    await Defaults.setBool(Defaults.AUTO_ROTATES, autoRotates);
   }
 
   setupGame() async {
@@ -1103,7 +930,10 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   setIdEndpoint(String idEnpoint) {
+    this.idEnpoint = idEnpoint;
+    setState(() {
 
+    });
   }
 
   automateGame({bool animated = false, bool fast = true}) async {
@@ -1204,7 +1034,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
-    var yPositionNormal = atLeft ? -1*(yPosition + INSET_NOTATION_START - heightScreen) : yPosition - INSET_NOTATION_START;
+    var yPositionNormal = atLeft ? -1*(yPosition + Const.INSET_NOTATION_START - heightScreen) : yPosition - Const.INSET_NOTATION_START;
     var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
@@ -1265,7 +1095,7 @@ class StateWidgetGame extends State<WidgetGame> {
     if (shouldScrollDown || shouldScrollUp) {
       var indexFirstNotation = getIndexFirstNotation(atLeft: atLeft);
       var indexFirstNotationUpdated = indexFirstNotation + (shouldScrollDown ? -1 : 1);
-      await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_SCROLL));
+      await Future.delayed(Duration(milliseconds: Const.MILLISECONDS_DELAY_SCROLL));
       setState(() {
         setIndexFirstNotation(indexFirstNotationUpdated, atLeft: atLeft);
       });
@@ -1289,7 +1119,35 @@ class StateWidgetGame extends State<WidgetGame> {
     if (timer.timeDark == 0) {
       return "Time over";
     }
-    return "";
+    return "Nothing to see here";
+  }
+
+  showTimes() {
+
+  }
+
+  pushHistory() {
+    Navigator.push(
+      context,
+      CleanPageRoute(
+          builder: (_) => WidgetHistory(),
+          onPop: () {
+            getDefaults();
+          }
+      ),
+    );
+  }
+
+  pushBoard() {
+    Navigator.push(
+      context,
+      CleanPageRoute(
+          builder: (_) => WidgetSettings(),
+          onPop: () {
+            getDefaults();
+          }
+      ),
+    );
   }
 
   // should be moved in diff file
