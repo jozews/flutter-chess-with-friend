@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 
 class Const {
 
+  static const ID_SERVICE = "com.jozews.chess_nearby";
+
   static const COLOR_SELECTED = Colors.white54;
 
   static const WIDTH_BORDER = 2.0;
+
   static const RADIUS_SOFT = 5.0;
 
   static const SIZE_DIVISOR = 0.1;

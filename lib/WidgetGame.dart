@@ -2,15 +2,21 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:device_info/device_info.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
 import 'Timer.dart';
 import 'Defaults.dart';
 import 'Const.dart';
 import 'Utils.dart';
+import 'Nearby.dart';
+import 'Connecton.dart';
+import 'PayloadGame.dart';
 
 import 'WidgetHistory.dart';
-import 'WidgetSettings.dart';
+import 'WidgetDefaults.dart';
+
 
 class WidgetGame extends StatefulWidget {
   WidgetGame({Key key}) : super(key: key);
@@ -61,7 +67,8 @@ class StateWidgetGame extends State<WidgetGame> {
   double timeTotalDark;
 
   // CONNECTION
-  String idEnpoint;
+  Connection connection;
+  AndroidDeviceInfo infoDeviceAndroid;
 
   // NOTATIONS
   // ...
@@ -79,18 +86,17 @@ class StateWidgetGame extends State<WidgetGame> {
   var isMenuShowing = false;
   var isOrientationLight = true;
 
-  // SETTINGS
+  // DEFAULTS
   // ...
-  MaterialAccentColor accentBoard;
-  bool showsValidMoves;
-  bool autoRotates;
-  int indexNamePieces;
+  Defaults defaults;
 
   // UTIL
   // ...
   // ...
 
-  bool get isConnected => idEnpoint != null;
+  MaterialAccentColor get accentBoard => defaults.indexAccent != null ?Const.ACCENTS[defaults.indexAccent] : null;
+
+  bool get isConnected => connection != null;
 
   Color get colorBoardDark => accentBoard.shade200.withAlpha((0.8 * 255).toInt());
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
@@ -127,6 +133,7 @@ class StateWidgetGame extends State<WidgetGame> {
   void initState() {
     super.initState();
     setupBoard();
+    setupConnection();
   }
 
   @override
@@ -141,7 +148,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 Row(
                   children: <Widget>[
                     widgetSide(),
-                    accentBoard != null ? widgetCenter() : Container(),
+                    defaults.indexAccent != null ? widgetCenter() : Container(),
                     widgetSide(atLeft: false),
                   ],
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -205,7 +212,7 @@ class StateWidgetGame extends State<WidgetGame> {
                         return widgetPiece(piece);
                       }).toList()
                     : [])
-                + (showsValidMoves ? (squaresValid ?? []).map<Widget>((square) {
+                + (defaults.showsValidMoves ? (squaresValid ?? []).map<Widget>((square) {
                   return widgetSquareValidOverlay(square);
                 }).toList() : []),
           ),
@@ -287,7 +294,7 @@ class StateWidgetGame extends State<WidgetGame> {
               var column = index ~/ 8;
               var row = 7 - (index % 8);
               var square = Square(column + 1, row + 1);
-              var tag = getSquareTag(square);
+              var tag = defaults.showsTagSquares ? getSquareTag(square) : null;
               var color = (index % 2) != (column % 2) ? colorBoardDark : colorBoardLight;
               return Container(
                 color: color,
@@ -335,7 +342,7 @@ class StateWidgetGame extends State<WidgetGame> {
     var nameTypePiece = piece.type.toString().replaceFirst("TypePiece.", "");
     var nameIsLight = piece.isLight ? "light" : "dark";
     var namePiece = "$nameTypePiece-$nameIsLight";
-    var nameSet = Const.NAME_PIECES[indexNamePieces];
+    var nameSet = Const.NAME_PIECES[defaults.indexNamePieces];
     var offsetCorrection = (heightSquare - sizePiece)/2;
     return Positioned(
       left: offsets[piece].dx + offsetCorrection,
@@ -470,6 +477,14 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuHistory();
               },
             ) : Container(),
+            GestureDetector(
+              child: widgetItemMenu(
+                  title: "flip"
+              ),
+              onTap: () {
+                onTapItemMenuOrientation();
+              },
+            ),
             GestureDetector(
               child: widgetItemMenu(
                   title: "board"
@@ -816,18 +831,30 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapItemMenuNew() {
     setupGame();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
   onTapItemMenuEnd() {
     endGame();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
   onTapItemMenuResign() {
 //    resignGame();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
   onTapItemMenuDraw() {
 //    drawGame();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
   onTapItemMenuTime() {
@@ -839,10 +866,24 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapItemMenuHistory() {
     pushHistory();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
-  onTapItemMenuBoard() {
-    pushBoard();
+  onTapItemMenuOrientation() {
+    isOrientationLight = !isOrientationLight;
+    setOffsetsOfPositionAt();
+    setState(() {
+      isMenuShowing = false;
+    });
+  }
+
+  onTapItemMenuBoard() async {
+    await pushBoard();
+    setState(() {
+      isMenuShowing = false;
+    });
   }
 
   onTapItemTimeControl(ControlTimer controlTimer) {
@@ -855,6 +896,132 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
   
+  // CONNECTION
+  // ...
+  // ...
+  setupConnection() async {
+    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+    infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
+    startAdvertising();
+    // NOTE: MIGHT BE GOOD TO ADD DELAY HERE
+    startDiscovering();
+  }
+
+  startAdvertising() {
+    Nearby.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
+      switch (advertise.type) {
+        case TypeLifecycle.initiated:
+          acceptConnection(advertise);
+          break;
+        case TypeLifecycle.result:
+          break;
+        case TypeLifecycle.disconnected:
+          break;
+      }
+    });
+  }
+
+  startDiscovering() {
+    Nearby.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
+      switch (discovery.type) {
+        case TypeDiscovery.found:
+          if (!isConnected) {
+            return;
+          }
+          requestConnection(discovery);
+          break;
+        case TypeDiscovery.lost:
+          break;
+      }
+    });
+  }
+
+  requestConnection(Discovery discovery) {
+    Nearby.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
+      switch (lifecycle.type) {
+        case TypeLifecycle.initiated:
+          acceptConnection(lifecycle);
+          break;
+        case TypeLifecycle.result:
+          break;
+        case TypeLifecycle.disconnected:
+          setDisconnected();
+          break;
+      }
+    });
+  }
+
+  acceptConnection(Lifecycle advertise) {
+    Nearby.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
+      switch (payload.type) {
+        case TypePayload.received:
+          handlePayload(payload);
+          break;
+        case TypePayload.transferred:
+          break;
+      }
+    });
+
+    setConnected(idEndpoint: advertise.idEndpoint, nameEndpoint: advertise.nameEndpoint);
+    var payloadGame = PayloadGame.idDevice(infoDeviceAndroid.androidId);
+    sendPayload(payloadGame);
+  }
+
+  setConnected({String idEndpoint, String nameEndpoint}) {
+    var connection = Connection(idEndpoint, nameEndpoint, null);
+    setState(() {
+      this.connection = connection;
+    });
+  }
+
+
+  setDisconnected() {
+    setState(() {
+      connection = null;
+    });
+  }
+
+  sendPayload(PayloadGame payload) {
+    var bytesPayload = payload.toBytes();
+    Nearby.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
+  }
+
+  handlePayload(Payload payload) {
+    var payloadGame = PayloadGame.fromBytes(payload.bytes);
+    switch (payloadGame.type) {
+      case TypePayloadGame.idDevice:
+        connection.idDevice = payloadGame.idDevice;
+        getScore();
+        break;
+      case TypePayloadGame.timer:
+        if (canUpdateControlTime) {
+
+        }
+        break;
+      case TypePayloadGame.start:
+        break;
+      case TypePayloadGame.moveStart:
+        break;
+      case TypePayloadGame.moveEnd:
+        break;
+      case TypePayloadGame.resign:
+        break;
+      case TypePayloadGame.draw:
+        break;
+    }
+  }
+
+  getScore() async {
+    var score = await Defaults.getInt(connection.idDevice);
+    setState(() {
+      connection.score = score;
+    });
+  }
+
+  setScore(int score) async {
+    await Defaults.setInt(connection.idDevice, score);
+  }
+
   // UTIL
   // ...
   // ...
@@ -890,24 +1057,11 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   setupBoard() async {
-    await getDefaults();
-    await Future.delayed(Duration(milliseconds: 1250)); // wait a bit to make proper layout
+    defaults = Defaults();
+    await defaults.getBoard();
+    setState(() { });
+    await Future.delayed(Duration(milliseconds: 100)); // wait a bit to make proper layout
     setupGame();
-  }
-  
-  getDefaults() async {
-
-    var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
-    var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? 0; //Random().nextInt(ACCENTS.length - 1);
-    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? 0;
-    var autoRotates = await Defaults.getBool(Defaults.AUTO_ROTATES) ?? false;
-
-    setState(() {
-      this.showsValidMoves = showsValidMoves;
-      accentBoard = Const.ACCENTS[indexAccent];
-      this.indexNamePieces = indexNamePieces;
-      this.autoRotates = autoRotates;
-    });
   }
 
   setupGame() async {
@@ -916,7 +1070,7 @@ class StateWidgetGame extends State<WidgetGame> {
     timer = Timer.control(controlTimer);
 
     positions = [game.board];
-    displayPosition();
+    setOffsetsOfPositionAt();
 
     setState(() {
       squaresSelected = [];
@@ -953,13 +1107,6 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
-  setIdEndpoint(String idEnpoint) {
-    this.idEnpoint = idEnpoint;
-    setState(() {
-
-    });
-  }
-
   automateGame({bool animated = false, bool fast = true}) async {
 
     await Future.delayed(Duration(seconds: 1));
@@ -974,7 +1121,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   endGame() async  {
-    displayPosition();
+    setOffsetsOfPositionAt();
     timer.stop();
     setState(() {
       isGameSetup = false;
@@ -999,9 +1146,7 @@ class StateWidgetGame extends State<WidgetGame> {
       var indexFirstAtSide = getIndexFirstNotation(atLeft: didLeftMoved);
 
       setState(() {
-        if (autoRotates && idEnpoint == null) {
-          isOrientationLight = !isOrientationLight;
-        }
+        autoRotateIfNeeded();
         notations.add(movePNG);
         var countCodesAll = getCountNotationsAll(atLeft: didLeftMoved);
         if (indexFirstAtSide + countColumnChildrenMax < countCodesAll) {
@@ -1029,7 +1174,7 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
 
-    displayPosition();
+    setOffsetsOfPositionAt();
 
     return movePNG;
   }
@@ -1045,7 +1190,7 @@ class StateWidgetGame extends State<WidgetGame> {
     return map;
   }
 
-  displayPosition({int index}) {
+  setOffsetsOfPositionAt({int index}) {
     index = index == null ? positions.length - 1 : index; // defaults to last position
     indexPosition = min(positions.length - 1, index);
     var position = positions[indexPosition];
@@ -1055,6 +1200,12 @@ class StateWidgetGame extends State<WidgetGame> {
       this.moveLast = moveLast;
       this.offsets = offsets;
     });
+  }
+
+  autoRotateIfNeeded() {
+    if (defaults.autoRotates && !isConnected) {
+      isOrientationLight = !isOrientationLight;
+    }
   }
 
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
@@ -1099,7 +1250,7 @@ class StateWidgetGame extends State<WidgetGame> {
   panOnIndexChildren({int indexChildren, bool atLeft}) {
     var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
     if (indexPosition != this.indexPosition) {
-      displayPosition(index: indexPosition);
+      setOffsetsOfPositionAt(index: indexPosition);
       scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
     }
   }
@@ -1150,25 +1301,23 @@ class StateWidgetGame extends State<WidgetGame> {
 
   }
 
-  pushHistory() {
-    Navigator.push(
+  pushHistory() async {
+    await Navigator.push(
       context,
       CleanPageRoute(
           builder: (_) => WidgetHistory(),
-          onPop: () {
-            getDefaults();
-          }
       ),
     );
   }
 
-  pushBoard() {
-    Navigator.push(
+  pushBoard() async {
+    await Navigator.push(
       context,
       CleanPageRoute(
-          builder: (_) => WidgetSettings(),
-          onPop: () {
-            getDefaults();
+          builder: (_) => WidgetDefaults(),
+          onPop: () async {
+            await defaults.getBoard();
+            setState(() { });
           }
       ),
     );

@@ -50,7 +50,7 @@ class Discovery {
 
 
 enum TypePayload {
-  initiated, result, disconnected
+  received, transferred
 }
 
 class Payload {

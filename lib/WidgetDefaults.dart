@@ -5,23 +5,23 @@ import 'Defaults.dart';
 import 'Const.dart';
 
 
-class WidgetSettings extends StatefulWidget {
+class WidgetDefaults extends StatefulWidget {
 
-  WidgetSettings({Key key}) : super(key: key);
+  WidgetDefaults({Key key}) : super(key: key);
 
   @override
-  StateWidgetSettings createState() => StateWidgetSettings();
+  StateWidgetDefaults createState() => StateWidgetDefaults();
 }
 
 
-class StateWidgetSettings extends State<WidgetSettings> {
+class StateWidgetDefaults extends State<WidgetDefaults> {
 
-  MaterialAccentColor accentBoard;
-  bool showsValidMoves;
-  bool autoRotates;
-  int indexNamePieces;
+  // DEFAULTS
+  // ...
+  var defaults = Defaults();
 
-  get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
+  MaterialAccentColor get accentBoard => defaults.indexAccent != null ? Const.ACCENTS[defaults.indexAccent] : null;
+  Color get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
 
   double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
   double get widthScreen => (MediaQuery.of(context).size.width - MediaQuery.of(context).padding.horizontal);
@@ -33,7 +33,8 @@ class StateWidgetSettings extends State<WidgetSettings> {
   }
 
   setup() async {
-    await getDefaults();
+    await defaults.getBoard();
+    setState(() { });
   }
 
   @override
@@ -47,7 +48,7 @@ class StateWidgetSettings extends State<WidgetSettings> {
           child: Stack(
             children: <Widget>[
               ListView(
-                children: widgetsShowValidMoves() + widgetsAutoRotates() + widgetsColors() + widgetsPieces(),
+                children: widgetsShowValidMoves() + widgetsShowTagSquares() + widgetsAutoRotates() + widgetsColors() + widgetsPieces(),
               ),
               widgetIconClose(),
             ],
@@ -82,42 +83,6 @@ class StateWidgetSettings extends State<WidgetSettings> {
     );
   }
 
-  List<Widget> widgetsColors() {
-    return [
-      Center(
-          child: widgetTitleSettings(
-              "Color"
-          )
-      ),
-      Center(
-        child: Container(
-          child: Wrap(
-            children: Const.ACCENTS.map<Widget>((accent) {
-              return GestureDetector(
-                child: widgetAccent(
-                  accent,
-                  isSelected: accent == accentBoard ?? false,
-                ),
-                onTap: () {
-                  setState(() {
-                    accentBoard = accent;
-                  });
-                },
-              );
-            }).toList(),
-            spacing: 4,
-            runSpacing: 4,
-          ),
-          margin: EdgeInsets.only(
-            top: Const.INSET_VERTICAL_SHORT_SETTINGS,
-            left: Const.INSET_HORIZONTAL_SETTINGS,
-            right: Const.INSET_HORIZONTAL_SETTINGS,
-          ),
-        ),
-      )
-    ];
-  }
-
   List<Widget> widgetsShowValidMoves() {
     return [
       Center(
@@ -132,22 +97,66 @@ class StateWidgetSettings extends State<WidgetSettings> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "yes",
-                    isSelected: showsValidMoves ?? false
+                    isSelected: defaults.showsValidMoves ?? false
                 ),
                 onTap: () {
                   setState(() {
-                    this.showsValidMoves = true;
+                    defaults.showsValidMoves = true;
                   });
                 },
               ),
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "no",
-                    isSelected: !(showsValidMoves ?? true)
+                    isSelected: !(defaults.showsValidMoves ?? true)
                 ),
                 onTap: () {
                   setState(() {
-                    this.showsValidMoves = false;
+                    defaults.showsValidMoves = false;
+                  });
+                },
+              ),
+            ],
+            spacing: 0,
+          ),
+          margin: EdgeInsets.only(
+            top: Const.INSET_VERTICAL_SHORT_SETTINGS,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> widgetsShowTagSquares() {
+    return [
+      Center(
+          child: widgetTitleSettings(
+              "Show square names"
+          )
+      ),
+      Center(
+        child: Container(
+          child: Wrap(
+            children: <Widget>[
+              GestureDetector(
+                child: widgetSelectionSettings(
+                    title: "yes",
+                    isSelected: defaults.showsTagSquares ?? false
+                ),
+                onTap: () {
+                  setState(() {
+                    defaults.showsTagSquares = true;
+                  });
+                },
+              ),
+              GestureDetector(
+                child: widgetSelectionSettings(
+                    title: "no",
+                    isSelected: !(defaults.showsTagSquares ?? true)
+                ),
+                onTap: () {
+                  setState(() {
+                    defaults.showsTagSquares = false;
                   });
                 },
               ),
@@ -166,7 +175,7 @@ class StateWidgetSettings extends State<WidgetSettings> {
     return [
       Center(
           child: widgetTitleSettings(
-              "Auto rotates when not connected"
+              "Auto rotate when not connected"
           )
       ),
       Center(
@@ -176,22 +185,22 @@ class StateWidgetSettings extends State<WidgetSettings> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "yes",
-                    isSelected: autoRotates ?? false
+                    isSelected: defaults.autoRotates ?? false
                 ),
                 onTap: () {
                   setState(() {
-                    this.autoRotates = true;
+                    defaults.autoRotates = true;
                   });
                 },
               ),
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "no",
-                    isSelected: !(autoRotates ?? true)
+                    isSelected: !(defaults.autoRotates ?? true)
                 ),
                 onTap: () {
                   setState(() {
-                    this.autoRotates = false;
+                    defaults.autoRotates = false;
                   });
                 },
               ),
@@ -205,6 +214,43 @@ class StateWidgetSettings extends State<WidgetSettings> {
       ),
     ];
   }
+
+  List<Widget> widgetsColors() {
+    return [
+      Center(
+          child: widgetTitleSettings(
+              "Color"
+          )
+      ),
+      Center(
+        child: Container(
+          child: Wrap(
+            children: Const.ACCENTS.map<Widget>((accent) {
+              return GestureDetector(
+                child: widgetAccent(
+                  accent,
+                  isSelected: accent == accentBoard ?? false,
+                ),
+                onTap: () {
+                  setState(() {
+                    defaults.indexAccent = Const.ACCENTS.indexOf(accent);
+                  });
+                },
+              );
+            }).toList(),
+            spacing: 4,
+            runSpacing: 4,
+          ),
+          margin: EdgeInsets.only(
+            top: Const.INSET_VERTICAL_SHORT_SETTINGS,
+            left: Const.INSET_HORIZONTAL_SETTINGS,
+            right: Const.INSET_HORIZONTAL_SETTINGS,
+          ),
+        ),
+      )
+    ];
+  }
+
 
   List<Widget> widgetsPieces() {
     return <Widget>[
@@ -220,11 +266,11 @@ class StateWidgetSettings extends State<WidgetSettings> {
               return GestureDetector(
                 child: widgetSetPiece(
                   namePiece,
-                  isSelected: (Const.NAME_PIECES.indexOf(namePiece) == indexNamePieces) ?? false,
+                  isSelected: (Const.NAME_PIECES.indexOf(namePiece) == defaults.indexNamePieces) ?? false,
                 ),
                 onTap: () {
                   setState(() {
-                    indexNamePieces = Const.NAME_PIECES.indexOf(namePiece);
+                    defaults.indexNamePieces = Const.NAME_PIECES.indexOf(namePiece);
                   });
                 },
               );
@@ -331,30 +377,8 @@ class StateWidgetSettings extends State<WidgetSettings> {
     );
   }
 
-  getDefaults() async {
-
-    var showsValidMoves = await Defaults.getBool(Defaults.SHOWS_VALID_MOVES) ?? true;
-    var indexAccent = await Defaults.getInt(Defaults.INDEX_ACCENT) ?? 0; //Random().nextInt(ACCENTS.length - 1);
-    var indexNamePieces = await Defaults.getInt(Defaults.INDEX_NAME_PIECES) ?? 0;
-    var autoRotates = await Defaults.getBool(Defaults.AUTO_ROTATES) ?? false;
-
-    setState(() {
-      this.showsValidMoves = showsValidMoves;
-      accentBoard = Const.ACCENTS[indexAccent];
-      this.indexNamePieces = indexNamePieces;
-      this.autoRotates = autoRotates;
-    });
-  }
-
-  setDefaults() async {
-    await Defaults.setBool(Defaults.SHOWS_VALID_MOVES, showsValidMoves);
-    await Defaults.setInt(Defaults.INDEX_ACCENT, Const.ACCENTS.indexOf(accentBoard));
-    await Defaults.setInt(Defaults.INDEX_NAME_PIECES, indexNamePieces);
-    await Defaults.setBool(Defaults.AUTO_ROTATES, autoRotates);
-  }
-
   onTapIconClose() async {
-    await setDefaults();
+    await defaults.setBoard();
     Navigator.pop(context);
   }
 }

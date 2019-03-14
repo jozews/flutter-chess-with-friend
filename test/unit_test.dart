@@ -2,9 +2,11 @@
 import 'package:test/test.dart';
 
 import 'package:chess_umbrella/Game.dart';
-import 'package:chess_umbrella/ActionNearby.dart';
+import 'package:chess_umbrella/PayloadGame.dart';
+
 
 void main() {
+
 
   test('Alexander Beliavsky vs Larry Mark Christiansen', () {
     
@@ -22,6 +24,7 @@ void main() {
     expect(game.state, StateGame.ongoing);
   });
 
+
   test('Byrne vs. Fischer, New York 1956', () {
 
     var game = Game.standard();
@@ -37,6 +40,7 @@ void main() {
 
     expect(game.state, StateGame.checkmateByBlack);
   });
+
 
   test('Kasparov vs. Topalov, Linares 1999', () async {
     
@@ -54,18 +58,29 @@ void main() {
     expect(game.state, StateGame.ongoing);
   });
 
-  test('action nearby', () {
+
+  test('converting payload game move end', () {
 
     var move = Move(Square(0, 0), Square(1, 1));
-    var action1 = ActionNearby.moveEnd(move, 1.11111111111111);
+    var action1 = PayloadGame.moveEnd(move, 1.11111111111111);
     var bytes1 = action1.toBytes();
-    var action2 = ActionNearby.fromBytes(bytes1);
+    var action2 = PayloadGame.fromBytes(bytes1);
 
     expect(action1.type == action2.type, true);
     expect(action1.move == action2.move, true);
     expect((action1.timestampEnd - action2.timestampEnd).abs() < 0.00001, true);
     expect(action1.timestampStart == action2.timestampStart, true);
     expect(action1.control == action2.control, true);
+  });
 
+
+  test('converting payload game identifier', () {
+
+    var action1 = PayloadGame.idDevice("hello world");
+    var bytes1 = action1.toBytes();
+    var action2 = PayloadGame.fromBytes(bytes1);
+
+    expect(action1.type == action2.type, true);
+    expect(action1.idDevice == action2.idDevice, true);
   });
 }
