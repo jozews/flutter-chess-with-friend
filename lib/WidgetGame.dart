@@ -11,7 +11,7 @@ import 'Defaults.dart';
 import 'Const.dart';
 import 'Utils.dart';
 import 'Nearby.dart';
-import 'Connecton.dart';
+import 'Connection.dart';
 import 'PayloadGame.dart';
 
 import 'WidgetHistory.dart';
@@ -28,13 +28,7 @@ class WidgetGame extends StatefulWidget {
 
 class StateWidgetGame extends State<WidgetGame> {
 
-  get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
-  get colorBackground2 => Colors.white;
-  get colorSelection => accentBoard.shade700.withAlpha((0.75 * 255).toInt());
-  get colorSquareValid => accentBoard.shade400.withAlpha((0.95 * 255).toInt());
-  get colorLastMove => colorSquareValid;
-  get colorSquareCheck => Colors.red.withAlpha((0.75 * 255).toInt());
-  get colorTagSquare => accentBoard.shade700;
+  final scaffoldKey = GlobalKey<ScaffoldState>();
 
   // MODEL
   // ...
@@ -63,8 +57,6 @@ class StateWidgetGame extends State<WidgetGame> {
   // TIME
   // ...
   ControlTimer controlTimer = ControlTimer.min5; // defaults blitz
-  double timeTotalLight;
-  double timeTotalDark;
 
   // CONNECTION
   Connection connection;
@@ -98,6 +90,14 @@ class StateWidgetGame extends State<WidgetGame> {
 
   bool get isConnected => connection != null;
 
+  String get keyScoreLocal => "${Defaults.SCORE_LOCAL}${connection.idDevice}";
+  String get keyScoreRemote => "${Defaults.SCORE_REMOTE}${connection.idDevice}";
+
+  bool get canPayloadGameSetControl => !isGameOngoing;
+  bool get canPayloadGameNewGame => !isGameOngoing;
+  bool get canPayloadGameResign => isGameOngoing;
+  bool get canPayloadGameDraw => isGameOngoing;
+
   Color get colorBoardDark => accentBoard.shade200.withAlpha((0.8 * 255).toInt());
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
 
@@ -126,20 +126,31 @@ class StateWidgetGame extends State<WidgetGame> {
   bool get shouldMenuShowItemHistory => !isGameOngoing && !isConnected;
   bool get shouldShowDim => isAlertShowing || isMenuShowing || isTimeShowing;
 
+  get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
+  get colorBackground2 => Colors.white;
+  get colorSelection => accentBoard.shade700.withAlpha((0.75 * 255).toInt());
+  get colorSquareValid => accentBoard.shade400.withAlpha((0.95 * 255).toInt());
+  get colorLastMove => colorSquareValid;
+  get colorSquareCheck => Colors.red.withAlpha((0.75 * 255).toInt());
+  get colorTagSquare => accentBoard.shade700;
+
   // STATE
+  // ...
   // ...
   // ...
   @override
   void initState() {
     super.initState();
-    setupBoard();
+    setupGame();
     setupConnection();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      child: Container(
+    return Scaffold(
+      key: scaffoldKey,
+      body: Container(
         child: SafeArea(
             left: true,
             bottom: true,
@@ -168,7 +179,10 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
+
   // WIDGETS
+  // ...
   // ...
   // ...
   Widget widgetIconMenu() {
@@ -192,6 +206,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetCenter() {
     return AspectRatio(
@@ -221,20 +236,21 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetSide({bool atLeft = true}) {
     return Expanded(
       child: Container(
         child: Stack(
           children: <Widget>[
-            timeTotalLight != null ? Align(
+            timer != null ? Align(
               alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
                   child: Container(
                     child: Text(
                       atLeft ? (isOrientationLight
-                          ? getFormattedInterval(timeTotalLight)
-                          : getFormattedInterval(timeTotalDark))
-                          : (!isOrientationLight ? getFormattedInterval(timeTotalLight)
-                          : getFormattedInterval(timeTotalDark)),
+                          ? getFormattedInterval(timer.timeLight)
+                          : getFormattedInterval(timer.timeDark))
+                          : (!isOrientationLight ? getFormattedInterval(timer.timeLight)
+                          : getFormattedInterval(timer.timeDark)),
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: Const.SIZE_TIME,
@@ -283,6 +299,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetBoard() {
     return Container(
@@ -338,6 +355,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetPiece(Piece piece) {
     var nameTypePiece = piece.type.toString().replaceFirst("TypePiece.", "");
     var nameIsLight = piece.isLight ? "light" : "dark";
@@ -359,6 +377,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetSquareOverlay(Square square, {bool isSelected = false, bool isLast = false}) {
     var offset = offsetFromSquare(square);
     return Positioned(
@@ -373,6 +392,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetSquareValidOverlay(Square square) {
     var offset = offsetFromSquare(square);
@@ -391,6 +411,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetNotation(int index, bool atLeft) {
     var indexNotation = getIndexNotationFromIndexChildren(index, atLeft: atLeft);
@@ -423,6 +444,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetMenu() {
     return Container(
@@ -505,6 +527,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetItemMenu({String title}) {
     return Container(
       child: Stack(
@@ -534,6 +557,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetAlert() {
     return Center(
       child: ClipRRect(
@@ -558,6 +582,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetTime() {
     return Center(
@@ -593,6 +618,7 @@ class StateWidgetGame extends State<WidgetGame> {
       ),
     );
   }
+
 
   Widget widgetItemTime(ControlTimer control) {
     String title;
@@ -647,6 +673,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
   Widget widgetDim() {
     return GestureDetector(
       child: Container(
@@ -658,7 +685,84 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+
+  Widget widgetConnection() {
+    return Text(
+        "You are now connected with ${connection.nameEndpoint}\n"
+            "Make a move to start the game",
+        textAlign: TextAlign.center
+    );
+  }
+
+
+  Widget widgetDrawSent() {
+    return Text(
+        "Draw offer sent",
+        textAlign: TextAlign.center
+    );
+  }
+
+
+  Widget widgetDrawOffered() {
+    return Wrap(
+      children: <Widget>[
+        Text(
+          "${connection.nameEndpoint} has offered a draw",
+          style: TextStyle(
+              color: Colors.white
+          ),
+        ),
+        GestureDetector(
+          child: Text(
+            "Accept",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500
+            ),
+          ),
+          onTap: () {
+            drawGame();
+            scaffoldKey.currentState.hideCurrentSnackBar();
+          },
+        ),
+        GestureDetector(
+          child: Text(
+            "Ignore",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500
+            ),
+          ),
+          onTap: () {
+            scaffoldKey.currentState.hideCurrentSnackBar();
+          },
+        )
+      ],
+      spacing: 5.0,
+      alignment: WrapAlignment.center,
+    );
+  }
+
+  Widget widgetDrawAgreed() {
+    return Text(
+        "Game drawn by agreement",
+        textAlign: TextAlign.center
+    );
+  }
+
+  Widget widgetConnectionLost() {
+    return Text(
+        "Connection lost",
+        textAlign: TextAlign.center
+    );
+  }
+
+
+
   // ACTIONS
+  // ...
   // ...
   // ...
   onTapDownBoard(TapDownDetails tap) {
@@ -699,6 +803,7 @@ class StateWidgetGame extends State<WidgetGame> {
     }
   }
 
+
   onTapUpBoard(TapUpDetails tap) {
     var isLastPosition = indexPosition == positions.length - 1;
     if (!isLastPosition || !isGameSetup) {
@@ -706,7 +811,7 @@ class StateWidgetGame extends State<WidgetGame> {
     }
     if (squaresSelected.length == 2) {
       var move = Move(squaresSelected.first, squaresSelected.last);
-      var _ = makeMove(move);
+      var _ = moveGame(move);
       if (_ != null) {
         setState(() {
           squaresSelected = [];
@@ -715,6 +820,7 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
   }
+
 
   onPanStartBoard(DragStartDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
@@ -740,6 +846,7 @@ class StateWidgetGame extends State<WidgetGame> {
       });
     }
   }
+
 
   onPanUpdateBoard(DragUpdateDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
@@ -777,6 +884,7 @@ class StateWidgetGame extends State<WidgetGame> {
     }
   }
 
+
   onPanEndBoard(DragEndDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
     if (!isLastPosition || !isGameSetup) {
@@ -787,7 +895,7 @@ class StateWidgetGame extends State<WidgetGame> {
       var offsetCentered = Offset(offset.dx + heightSquare/2, offset.dy + heightSquare/2);
       var square2 = squareFromOffset(offsetCentered);
       var move = Move(squaresSelected.first, square2);
-      var _ = makeMove(move);
+      var _ = moveGame(move);
       if (_ != null) {
         setState(() {
           squaresSelected = [];
@@ -798,7 +906,7 @@ class StateWidgetGame extends State<WidgetGame> {
     }
     else if (squaresSelected.length == 2) {
       var move = Move(squaresSelected.first, squaresSelected.last);
-      var _ = makeMove(move);
+      var _ = moveGame(move);
       if (_ != null) {
         setState(() {
           squaresSelected = [];
@@ -807,6 +915,7 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
   }
+
 
   onTapDim() {
     setState(() {
@@ -822,6 +931,7 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   onTapIconMenu() {
     setState(() {
       isTimeShowing = false;
@@ -830,11 +940,12 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   onTapItemMenuNew() {
-    setupGame();
+    newGame();
     setState(() {
       isMenuShowing = false;
     });
   }
+
 
   onTapItemMenuEnd() {
     endGame();
@@ -843,19 +954,22 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   onTapItemMenuResign() {
-//    resignGame();
     setState(() {
       isMenuShowing = false;
     });
+    resignGame();
   }
 
+
   onTapItemMenuDraw() {
-//    drawGame();
     setState(() {
       isMenuShowing = false;
     });
+    drawGame();
   }
+
 
   onTapItemMenuTime() {
     setState(() {
@@ -864,6 +978,7 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   onTapItemMenuHistory() {
     pushHistory();
     setState(() {
@@ -871,13 +986,15 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   onTapItemMenuOrientation() {
     isOrientationLight = !isOrientationLight;
-    setOffsetsOfPositionAt();
+    setOffsetsOfPosition();
     setState(() {
       isMenuShowing = false;
     });
   }
+
 
   onTapItemMenuBoard() async {
     await pushBoard();
@@ -886,17 +1003,19 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   onTapItemTimeControl(ControlTimer controlTimer) {
     this.controlTimer = controlTimer;
-    this.timer = Timer.control(this.controlTimer);
     setState(() {
       this.isTimeShowing = false;
-      timeTotalLight = timer.timeLight;
-      timeTotalDark = timer.timeDark;
+      this.timer = Timer.control(this.controlTimer);
     });
   }
-  
+
+
+
   // CONNECTION
+  // ...
   // ...
   // ...
   setupConnection() async {
@@ -907,19 +1026,23 @@ class StateWidgetGame extends State<WidgetGame> {
     startDiscovering();
   }
 
+
   startAdvertising() {
     Nearby.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
       switch (advertise.type) {
         case TypeLifecycle.initiated:
           acceptConnection(advertise);
+          connect(idEndpoint: advertise.idEndpoint, nameEndpoint: advertise.nameEndpoint, isDiscoverer: false);
           break;
         case TypeLifecycle.result:
           break;
         case TypeLifecycle.disconnected:
+          disconnect();
           break;
       }
     });
   }
+
 
   startDiscovering() {
     Nearby.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
@@ -936,22 +1059,25 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   requestConnection(Discovery discovery) {
     Nearby.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
       switch (lifecycle.type) {
         case TypeLifecycle.initiated:
-          acceptConnection(lifecycle);
+          acceptConnection(lifecycle, isDiscoverer: true);
+          connect(idEndpoint: discovery.idEndpoint, nameEndpoint: discovery.nameEndpoint, isDiscoverer: true);
           break;
         case TypeLifecycle.result:
           break;
         case TypeLifecycle.disconnected:
-          setDisconnected();
+          disconnect();
           break;
       }
     });
   }
 
-  acceptConnection(Lifecycle advertise) {
+
+  acceptConnection(Lifecycle advertise, {bool isDiscoverer = false}) {
     Nearby.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
       switch (payload.type) {
         case TypePayload.received:
@@ -961,73 +1087,360 @@ class StateWidgetGame extends State<WidgetGame> {
           break;
       }
     });
-
-    setConnected(idEndpoint: advertise.idEndpoint, nameEndpoint: advertise.nameEndpoint);
-    var payloadGame = PayloadGame.idDevice(infoDeviceAndroid.androidId);
-    sendPayload(payloadGame);
   }
 
-  setConnected({String idEndpoint, String nameEndpoint}) {
-    var connection = Connection(idEndpoint, nameEndpoint, null);
+
+  connect({String idEndpoint, String nameEndpoint, bool isDiscoverer}) {
+
+    var payloadIdDevice = PayloadGame.setIdDevice(infoDeviceAndroid.androidId);
+    sendPayload(payloadIdDevice);
+
+    if (isDiscoverer) {
+      var payloadControl = PayloadGame.setControl(timer.control);
+      sendPayload(payloadControl);
+    }
+
+    var connection = Connection(idEndpoint, nameEndpoint);
+
     setState(() {
       this.connection = connection;
+      connection.isLocalLight = isDiscoverer ? true : true; // both devices start as white
     });
+
+    newGame();
+
+    showSnackBar(
+        widgetConnection()
+    );
   }
 
 
-  setDisconnected() {
+  disconnect() {
+
     setState(() {
       connection = null;
     });
+
+    if (isGameOngoing) {
+      abortGame();
+    }
+
+    showSnackBar(
+        widgetConnectionLost()
+    );
   }
+
 
   sendPayload(PayloadGame payload) {
     var bytesPayload = payload.toBytes();
     Nearby.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
   }
 
+
   handlePayload(Payload payload) {
     var payloadGame = PayloadGame.fromBytes(payload.bytes);
     switch (payloadGame.type) {
-      case TypePayloadGame.idDevice:
+      case TypePayloadGame.setIdDevice:
         connection.idDevice = payloadGame.idDevice;
         getScore();
         break;
-      case TypePayloadGame.timer:
-        if (canUpdateControlTime) {
-
+      case TypePayloadGame.setControl:
+        if (canPayloadGameSetControl) {
+          setState(() {
+            timer = Timer.control(payloadGame.control);
+          });
         }
         break;
-      case TypePayloadGame.start:
+      case TypePayloadGame.newGame:
+        if (canPayloadGameNewGame) {
+          newGame();
+        }
         break;
-      case TypePayloadGame.moveStart:
+      case TypePayloadGame.startMove:
+        timer.addTimestampStart(timestamp: payloadGame.timestampStart);
         break;
-      case TypePayloadGame.moveEnd:
+      case TypePayloadGame.endMove:
+        moveGame(payloadGame.move, payload: payloadGame);
         break;
       case TypePayloadGame.resign:
+        if (canPayloadGameResign) {
+          resignGame(payload: payloadGame);
+        }
         break;
       case TypePayloadGame.draw:
+        if (canPayloadGameDraw) {
+          drawGame(payload: payloadGame);
+        }
         break;
     }
   }
 
+
   getScore() async {
-    var score = await Defaults.getInt(connection.idDevice);
+    var scoreLocal = await Defaults.getDouble(keyScoreLocal) ?? 0.0;
+    var scoreRemote = await Defaults.getDouble(keyScoreRemote) ?? 0.0;
     setState(() {
-      connection.score = score;
+      connection.scoreLocal = scoreLocal;
+      connection.scoreRemote = scoreRemote;
     });
   }
 
-  setScore(int score) async {
-    await Defaults.setInt(connection.idDevice, score);
+
+  setScore({double scoreLocal, double scoreRemote}) async {
+    if (scoreLocal != null) {
+      await Defaults.setDouble(keyScoreLocal, scoreLocal);
+    }
+    if (scoreRemote != null) {
+      await Defaults.setDouble(keyScoreRemote, scoreRemote);
+    }
+    setState(() {
+      connection.scoreLocal = scoreLocal;
+      connection.scoreRemote = scoreRemote;
+    });
   }
 
+
+
+  // GAME
+  // ...
+  // ...
+  // ...
+  setupGame() async {
+    defaults = Defaults();
+    await defaults.getBoard();
+    setState(() { });
+    await Future.delayed(Duration(milliseconds: 0)); // wait a bit to make proper layout
+    newGame();
+  }
+  
+  
+  newGame() async {
+
+    game = Game.standard();
+    timer = Timer.control(controlTimer);
+
+    positions = [game.board];
+    setOffsetsOfPosition();
+
+    setState(() {
+      squaresSelected = [];
+      squaresValid = [];
+      indexFirstNotationLeft = 0;
+      indexFirstNotationRight = 0;
+      isGameSetup = true;
+      this.offsets = offsets;
+      notations = [];
+      timer.timeTotal = timer.timeTotal;
+      timer.timeTotal = timer.timeTotal;
+    });
+  }
+
+
+  startGame({PayloadGame payload}) {
+
+    var isLocal = payload == null;
+
+    setState(() {
+      isGameOngoing = true;
+      connection.isLocalLight = isLocal ? true : false;
+    });
+
+    // first move starts and end at the same time (almost when payload is not null)
+    timer.addTimestampStart(timestamp: payload != null ? payload.timestampEnd : null);
+    timer.addTimestampEnd(timestamp: payload != null ? payload.timestampEnd : null);
+
+    timer.start().listen((time) {
+      setState(() {
+        timer.timeLight = timer.timeLight;
+        timer.timeDark = timer.timeDark;
+      });
+      var isTimeOver = timer.timeLight == 0 || timer.timeDark == 0;
+      if (game.state == StateGame.ongoing && isAlertShowing != isTimeOver) {
+        endGame();
+        setState(() {
+          this.isAlertShowing = isTimeOver;
+        });
+      }
+    });
+  }
+
+
+  String moveGame(Move move, {PayloadGame payload}) {
+
+    var isLocal = payload == null;
+    if (isConnected && isLocal && connection.isLocalLight != game.isLightToMove) {
+      setOffsetsOfPosition();
+      return null;
+    }
+
+    var wasPositionLastShowing = indexPosition == positions.length - 1;
+
+    String movePNG = game.move(move);
+
+    if (movePNG != null) {
+
+      if (!isGameOngoing) {
+        startGame(payload: payload);
+      }
+
+      // reset draw agreements
+      if (isConnected) {
+        connection.didLocalDraw = null;
+        connection.didRemoteDraw = null;
+      }
+
+      if (!isConnected || !isLocal) {
+        var timestampNow = Timer.timestampNow;
+        timer.addTimestampStart(timestamp: timestampNow);
+        if (isConnected) {
+          var payloadStart = PayloadGame.startMove(timestampNow);
+          sendPayload(payloadStart);
+        }
+      }
+
+      var wasLeftMove = !isLeftToMove;
+      var indexFirstAtSide = getIndexFirstNotation(atLeft: wasLeftMove);
+
+      setState(() {
+        autoRotateIfNeeded();
+        notations.add(movePNG);
+        var countCodesAll = getCountNotationsAll(atLeft: wasLeftMove);
+        if (indexFirstAtSide + countColumnChildrenMax < countCodesAll) {
+          setIndexFirstNotation(indexFirstAtSide + 1, atLeft: wasLeftMove);
+        }
+      });
+
+      var position = Map<Square, Piece>.from(game.board);
+      positions.add(position);
+
+      // show alert: CHECKMATE! or stalemate
+      if (game.state != StateGame.ongoing) {
+        connection.isLocalLight = null;
+        endGame();
+        setState(() {
+          isAlertShowing = true;
+        });
+      }
+    }
+
+    var indexPositionNew = wasPositionLastShowing ? positions.length - 1 : indexPosition;
+    if (wasPositionLastShowing) {
+      setOffsetsOfPosition(index: indexPositionNew);
+    }
+
+    return movePNG;
+  }
+
+
+  resignGame({PayloadGame payload}) {
+    var isLocal = payload == null;
+    if (isLocal) {
+      var payloadResign = PayloadGame.resign();
+      sendPayload(payloadResign);
+    }
+    endGame(isResignLocal: isLocal);
+  }
+
+
+  drawGame({PayloadGame payload}) {
+    var isLocal = payload == null;
+    if (isLocal) {
+      connection.didLocalDraw = true;
+    }
+    else {
+      connection.didRemoteDraw = true;
+    }
+    if (connection.didLocalDraw == true && connection.didRemoteDraw) {
+      endGame(isDraw: true);
+      showSnackBar(
+          widgetDrawAgreed()
+      );
+    }
+    else if (isLocal) {
+      var payloadDraw = PayloadGame.draw();
+      sendPayload(payloadDraw);
+      showSnackBar(
+          widgetDrawSent()
+      );
+    }
+    else {
+      showSnackBar(
+        widgetDrawOffered()
+      );
+    }
+  }
+
+
+  endGame({bool isResignLocal, bool isDraw}) async  {
+
+    setOffsetsOfPosition();
+    timer.stop();
+
+    setState(() {
+      isGameSetup = false;
+      isGameOngoing = false;
+      squaresSelected = [];
+      squaresValid = [];
+    });
+
+    if (isConnected) {
+
+      connection.didLocalDraw = null;
+      connection.didRemoteDraw = null;
+
+      var scoreLocalUpdated = connection.scoreLocal;
+      var scoreRemoteUpdated = connection.scoreRemote;
+      if (game.state == StateGame.checkmate) {
+        scoreLocalUpdated += connection.isLocalLight == !game.isLightToMove ? 1.0 : 0.0;
+        scoreRemoteUpdated += !connection.isLocalLight == !game.isLightToMove ? 1.0 : 0.0;
+      }
+      else if (isResignLocal != null) {
+        scoreLocalUpdated += !isResignLocal ? 1.0 : 0.0;
+        scoreRemoteUpdated += isResignLocal ? 1.0 : 0.0;
+      }
+      else if (game.state == StateGame.stalemate || isDraw) {
+        scoreLocalUpdated += 0.5;
+        scoreRemoteUpdated += 0.5;
+      }
+      setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
+      saveGame();
+    }
+  }
+
+  
+  abortGame() async {
+    saveGame();
+  }
+
+
+  saveGame() async {
+    // TODO: IMPLEMENT
+  }
+
+  
+  automateGame({int millisecondsDelay = 0}) async {
+
+    await Future.delayed(Duration(seconds: 1));
+
+    var notations = "Nf3;Nf6;c4;g6;Nc3;Bg7;d4;O-O;Bf4;d5;Qb3;dxc4;Qxc4;c6;e4;Nbd7;Rd1;Nb6;Qc5;Bg4;Bg5;Na4;Qa3;Nxc3;bxc3;Nxe4;Bxe7;Qb6;Bc4;Nxc3;Bc5;Rfe8+;Kf1;Be6;Bxb6;Bxc4+;Kg1;Ne2+;Kf1;Nxd4+;Kg1;Ne2+;Kf1;Nc3+;Kg1;axb6;Qb4;Ra4;Qxb6;Nxd1;h3;Rxa2;Kh2;Nxf2;Re1;Rxe1;Qd8+;Bf8;Nxe1;Bd5;Nf3;Ne4;Qb8;b5;h4;h5;Ne5;Kg7;Kg1;Bc5+;Kf1;Ng3+;Ke1;Bb4+;Kd1;Bb3+;Kc1;Ne2+;Kb1;Nc3+;Kc1;Rc2#";
+
+    for (String notation in notations.split(";")) {
+      var move = game.getMoveFromNotation(notation);
+      notation = moveGame(move);
+      await Future.delayed(Duration(milliseconds: millisecondsDelay));
+    }
+  }
+  
+  
+  
   // UTIL
+  // ...
   // ...
   // ...
   Offset offsetFromGlobalPosition(Offset position) {
     return Offset(position.dx - (widthDark/2), position.dy);
   }
+
 
   Offset offsetFromSquare(Square square) {
     var dx = (square.column - 1) * heightSquare;
@@ -1035,12 +1448,14 @@ class StateWidgetGame extends State<WidgetGame> {
     return Offset(dx, dy);
   }
 
+
   Square squareFromOffset(Offset offset) {
     var column = (offset.dx / heightSquare + 1);
     var row = (isOrientationLight ? -offset.dy / heightSquare + 9 : offset.dy / heightSquare + 1);
     return Square(column.floor(), row.floor());
   }
-  
+
+
   String getSquareTag(Square square) {
     var isFirstColumn = square.column == 1;
     var isFirstRow = square.row == 1;
@@ -1056,128 +1471,6 @@ class StateWidgetGame extends State<WidgetGame> {
     return null;
   }
 
-  setupBoard() async {
-    defaults = Defaults();
-    await defaults.getBoard();
-    setState(() { });
-    await Future.delayed(Duration(milliseconds: 100)); // wait a bit to make proper layout
-    setupGame();
-  }
-
-  setupGame() async {
-
-    game = Game.standard();
-    timer = Timer.control(controlTimer);
-
-    positions = [game.board];
-    setOffsetsOfPositionAt();
-
-    setState(() {
-      squaresSelected = [];
-      squaresValid = [];
-      indexFirstNotationLeft = 0;
-      indexFirstNotationRight = 0;
-      isGameSetup = true;
-      this.offsets = offsets;
-      notations = [];
-      timeTotalLight = timer.timeTotal;
-      timeTotalDark = timer.timeTotal;
-    });
-
-//    automateGame();
-  }
-  
-  startGame() {
-    setState(() {
-      isGameOngoing = true;
-    });
-    timer.addTimestampStart();
-    timer.start().listen((time) {
-      setState(() {
-        timeTotalLight = timer.timeLight;
-        timeTotalDark = timer.timeDark;
-      });
-      var isTimeOver = timeTotalLight == 0 || timeTotalDark == 0;
-      if (game.state == StateGame.ongoing && isAlertShowing != isTimeOver) {
-        endGame();
-        setState(() {
-          this.isAlertShowing = isTimeOver;
-        });
-      }
-    });
-  }
-
-  automateGame({bool animated = false, bool fast = true}) async {
-
-    await Future.delayed(Duration(seconds: 1));
-
-    var notations = "Nf3;Nf6;c4;g6;Nc3;Bg7;d4;O-O;Bf4;d5;Qb3;dxc4;Qxc4;c6;e4;Nbd7;Rd1;Nb6;Qc5;Bg4;Bg5;Na4;Qa3;Nxc3;bxc3;Nxe4;Bxe7;Qb6;Bc4;Nxc3;Bc5;Rfe8+;Kf1;Be6;Bxb6;Bxc4+;Kg1;Ne2+;Kf1;Nxd4+;Kg1;Ne2+;Kf1;Nc3+;Kg1;axb6;Qb4;Ra4;Qxb6;Nxd1;h3;Rxa2;Kh2;Nxf2;Re1;Rxe1;Qd8+;Bf8;Nxe1;Bd5;Nf3;Ne4;Qb8;b5;h4;h5;Ne5;Kg7;Kg1;Bc5+;Kf1;Ng3+;Ke1;Bb4+;Kd1;Bb3+;Kc1;Ne2+;Kb1;Nc3+;Kc1;Rc2#";
-
-    for (String notation in notations.split(";")) {
-      var move = game.defineMoveFromNotation(notation);
-      notation = makeMove(move,);
-      await Future.delayed(Duration(milliseconds: !animated ? 0 : fast ? 200 : 500));
-    }
-  }
-
-  endGame() async  {
-    setOffsetsOfPositionAt();
-    timer.stop();
-    setState(() {
-      isGameSetup = false;
-      isGameOngoing = false;
-      squaresSelected = [];
-      squaresValid = [];
-    });
-  }
-
-  String makeMove(Move move) {
-
-    var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition) {
-      return null;
-    }
-
-    String movePNG = game.makeMove(move);
-
-    if (movePNG != null) {
-
-      var didLeftMoved = !isLeftToMove;
-      var indexFirstAtSide = getIndexFirstNotation(atLeft: didLeftMoved);
-
-      setState(() {
-        autoRotateIfNeeded();
-        notations.add(movePNG);
-        var countCodesAll = getCountNotationsAll(atLeft: didLeftMoved);
-        if (indexFirstAtSide + countColumnChildrenMax < countCodesAll) {
-          setIndexFirstNotation(indexFirstAtSide + 1, atLeft: didLeftMoved);
-        }
-      });
-
-      var position = Map<Square, Piece>.from(game.board);
-      positions.add(position);
-
-      // start game
-      if (game.moves.length == 1) {
-        startGame();
-      }
-
-      timer.addTimestampEnd();
-      timer.addTimestampStart();
-
-      // show alert: CHECKMATE! or stalemate
-      if (game.state != StateGame.ongoing) {
-        endGame();
-        setState(() {
-          isAlertShowing = true;
-        });
-      }
-    }
-
-    setOffsetsOfPositionAt();
-
-    return movePNG;
-  }
 
   Map<Piece, Offset> calculateOffsets(Map<Square, Piece> position) {
     var map = Map.fromIterable(position.entries,
@@ -1190,7 +1483,8 @@ class StateWidgetGame extends State<WidgetGame> {
     return map;
   }
 
-  setOffsetsOfPositionAt({int index}) {
+  
+  setOffsetsOfPosition({int index}) {
     index = index == null ? positions.length - 1 : index; // defaults to last position
     indexPosition = min(positions.length - 1, index);
     var position = positions[indexPosition];
@@ -1202,30 +1496,36 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+  
   autoRotateIfNeeded() {
     if (defaults.autoRotates && !isConnected) {
       isOrientationLight = !isOrientationLight;
     }
   }
 
+  
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
     var yPositionNormal = atLeft ? -1*(yPosition + Const.INSET_NOTATION_START - heightScreen) : yPosition - Const.INSET_NOTATION_START;
     var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
 
+  
   int getIndexNotationFromIndexChildren(int indexChildren, {bool atLeft}) {
     return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 0 : 1) : (isOrientationLight ? 1 : 0));
   }
+  
 
   int getIndexPositionFromIndexChildren(int indexChildren, {bool atLeft}) {
     return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 1 : 2) : (isOrientationLight ? 2 : 1));
   }
 
+  
   int getIndexFirstNotation({bool atLeft}) {
     return atLeft ? indexFirstNotationLeft : indexFirstNotationRight;
   }
 
+  
   setIndexFirstNotation(int index, {bool atLeft}) {
     if (atLeft) {
       indexFirstNotationLeft = index;
@@ -1234,6 +1534,7 @@ class StateWidgetGame extends State<WidgetGame> {
       indexFirstNotationRight = index;
     }
   }
+  
 
   int getCountNotationsAll({bool atLeft}) {
     var doubleCountNotation = (notations ?? []).length / 2;
@@ -1247,13 +1548,15 @@ class StateWidgetGame extends State<WidgetGame> {
     return countNotations;
   }
 
+  
   panOnIndexChildren({int indexChildren, bool atLeft}) {
     var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
     if (indexPosition != this.indexPosition) {
-      setOffsetsOfPositionAt(index: indexPosition);
+      setOffsetsOfPosition(index: indexPosition);
       scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
     }
   }
+  
   
   scrollNotationsIfNeeded({int indexChildren, bool atLeft}) async {
 
@@ -1278,11 +1581,9 @@ class StateWidgetGame extends State<WidgetGame> {
 
   }
 
+  
   String getAlertTitle() {
-    if (game.state == StateGame.checkmateByBlack) {
-      return "Checkmate!";
-    }
-    if (game.state == StateGame.checkmateByLight) {
+    if (game.state == StateGame.checkmate) {
       return "Checkmate!";
     }
     if (game.state == StateGame.stalemate) {
@@ -1296,11 +1597,11 @@ class StateWidgetGame extends State<WidgetGame> {
     }
     return "Nothing to see here";
   }
-
-  showTimes() {
-
-  }
-
+  
+  // PUSH
+  // ...
+  // ...
+  // ...
   pushHistory() async {
     await Navigator.push(
       context,
@@ -1310,6 +1611,7 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+  
   pushBoard() async {
     await Navigator.push(
       context,
@@ -1323,6 +1625,14 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
+  showSnackBar(Widget content) {
+    scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+            content: content
+        )
+    );
+  }
+  
   // should be moved in diff file
   String getFormattedInterval(double interval) {
     var intervalFloored = interval.ceil();

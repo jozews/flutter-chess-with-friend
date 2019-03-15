@@ -219,7 +219,7 @@ class Piece {
 }
 
 enum StateGame {
-  ongoing, checkmateByLight, checkmateByBlack, stalemate
+  ongoing, checkmate, stalemate
 }
 
 class Square {
@@ -694,7 +694,7 @@ class Game {
     return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
   }
 
-  String makeMove(Move move) {
+  String move(Move move) {
 
     // validate move
     if (!isMoveValid(move)) {
@@ -751,7 +751,7 @@ class Game {
 
     if (!areThereValidMoves) {
       if (checks.isNotEmpty) {
-        state = isLightToMove ? StateGame.checkmateByBlack : StateGame.checkmateByLight;
+        state = StateGame.checkmate;
       }
       else {
         state = StateGame.ongoing;
@@ -771,14 +771,14 @@ class Game {
     }
     var notationCapture = pieceTaken != null ? "x" : "";
     var notationSquare = move.square2.notation;
-    var notationEnd = state == StateGame.checkmateByBlack || state == StateGame.checkmateByLight ? "#" : checks.isNotEmpty ? "+" : "";
+    var notationEnd = state == StateGame.checkmate ? "#" : checks.isNotEmpty ? "+" : "";
     var movePNG = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
 
     return movePNG;
   }
 
 
-  Move defineMoveFromNotation(String notation) {
+  Move getMoveFromNotation(String notation) {
 
     if (notation == "") {
       print("");

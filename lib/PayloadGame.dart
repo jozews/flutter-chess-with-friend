@@ -8,7 +8,7 @@ import 'Timer.dart';
 
 
 enum TypePayloadGame {
-  idDevice, timer, start, moveStart, moveEnd, resign, draw
+  setIdDevice, setControl, newGame, startMove, endMove, resign, draw
 }
 
 class PayloadGame {
@@ -20,16 +20,16 @@ class PayloadGame {
   ControlTimer control;
   String idDevice;
 
-  PayloadGame.idDevice(this.idDevice) {
-    this.type = TypePayloadGame.idDevice;
+  PayloadGame.setIdDevice(this.idDevice) {
+    this.type = TypePayloadGame.setIdDevice;
   }
 
-  PayloadGame.timer(this.control) {
-    this.type = TypePayloadGame.timer;
+  PayloadGame.setControl(this.control) {
+    this.type = TypePayloadGame.setControl;
   }
 
-  PayloadGame.start() {
-    this.type = TypePayloadGame.start;
+  PayloadGame.newGame() {
+    this.type = TypePayloadGame.newGame;
   }
 
   PayloadGame.resign() {
@@ -40,29 +40,29 @@ class PayloadGame {
     this.type = TypePayloadGame.draw;
   }
 
-  PayloadGame.moveEnd(this.move, this.timestampEnd) {
-    this.type = TypePayloadGame.moveEnd;
+  PayloadGame.endMove(this.move, this.timestampEnd) {
+    this.type = TypePayloadGame.endMove;
   }
 
-  PayloadGame.moveStart(this.timestampStart) {
-    this.type = TypePayloadGame.moveStart;
+  PayloadGame.startMove(this.timestampStart) {
+    this.type = TypePayloadGame.startMove;
   }
 
   PayloadGame.fromBytes(Uint8List list) {
     ByteData byteData = ByteData.view(list.buffer);
     this.type = TypePayloadGame.values[byteData.getInt8(0)];
     switch (type) {
-      case TypePayloadGame.idDevice:
+      case TypePayloadGame.setIdDevice:
         var bytesString =  byteData.buffer.asUint8List(1, byteData.lengthInBytes - 1);
         this.idDevice = decodeUtf8(bytesString);
         break;
-      case TypePayloadGame.timer:
+      case TypePayloadGame.setControl:
         this.control = ControlTimer.values[byteData.getInt8(1)];
         break;
-      case TypePayloadGame.moveStart:
+      case TypePayloadGame.startMove:
         this.timestampStart = byteData.getFloat32(1);
         break;
-      case TypePayloadGame.moveEnd:
+      case TypePayloadGame.endMove:
         this.timestampEnd = byteData.getFloat32(1);
         var square1 = Square.fromInt(byteData.getInt8(5));
         var square2 = Square.fromInt(byteData.getInt8(6));
@@ -76,7 +76,7 @@ class PayloadGame {
   Uint8List toBytes() {
     ByteData byteData;
     switch (type) {
-      case TypePayloadGame.idDevice:
+      case TypePayloadGame.setIdDevice:
         var bytes = encodeUtf8(idDevice);
         byteData = new ByteData(1 + bytes.length);
         byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
@@ -84,17 +84,17 @@ class PayloadGame {
           byteData.setInt8(1 + idx, byte);
         });
         break;
-      case TypePayloadGame.timer:
+      case TypePayloadGame.setControl:
         byteData = new ByteData(2);
         byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
         byteData.setInt8(1, ControlTimer.values.indexOf(control));
         break;
-      case TypePayloadGame.moveStart:
+      case TypePayloadGame.startMove:
         byteData = new ByteData(5);
         byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
         byteData.setFloat32(1, timestampStart);
         break;
-      case TypePayloadGame.moveEnd:
+      case TypePayloadGame.endMove:
         byteData = new ByteData(11);
         byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
         byteData.setFloat32(1, timestampEnd);

@@ -19,6 +19,7 @@ dependencies:
   tuple: ^1.0.2
   shared_preferences: any
   simple_permissions: ^0.1.9
+  path_provider: any
 
 
 dev_dependencies:

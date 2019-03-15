@@ -16,8 +16,8 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.defineMoveFromNotation(notation);
-      notation = game.makeMove(move);
+      var move = game.getMoveFromNotation(notation);
+      notation = game.move(move);
       expect(notation != null, true);
     }
 
@@ -33,12 +33,12 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.defineMoveFromNotation(notation);
-      notation = game.makeMove(move);
+      var move = game.getMoveFromNotation(notation);
+      notation = game.move(move);
       expect(notation != null, true);
     }
 
-    expect(game.state, StateGame.checkmateByBlack);
+    expect(game.state, StateGame.checkmate);
   });
 
 
@@ -50,8 +50,8 @@ void main() {
     for (String notation in notations.split(";")) {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
-      var move = game.defineMoveFromNotation(notation);
-      notation = game.makeMove(move);
+      var move = game.getMoveFromNotation(notation);
+      notation = game.move(move);
       expect(notation != null, true);
     }
 
@@ -62,7 +62,7 @@ void main() {
   test('converting payload game move end', () {
 
     var move = Move(Square(0, 0), Square(1, 1));
-    var action1 = PayloadGame.moveEnd(move, 1.11111111111111);
+    var action1 = PayloadGame.endMove(move, 1.11111111111111);
     var bytes1 = action1.toBytes();
     var action2 = PayloadGame.fromBytes(bytes1);
 
@@ -76,7 +76,7 @@ void main() {
 
   test('converting payload game identifier', () {
 
-    var action1 = PayloadGame.idDevice("hello world");
+    var action1 = PayloadGame.setIdDevice("hello world");
     var bytes1 = action1.toBytes();
     var action2 = PayloadGame.fromBytes(bytes1);
 

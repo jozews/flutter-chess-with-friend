@@ -18,6 +18,8 @@ enum ControlTimer {
 
 class Timer {
 
+  static double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
+
   double timeTotal;
 
   double incrementOnStart;
@@ -91,7 +93,6 @@ class Timer {
 
   var millisecondsTickPrecision = 10;
 
-  double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
   bool get isLightTicking => moves.length % 2 == 0;
   double get timeOfTicking => getTime(isLightTicking);
 

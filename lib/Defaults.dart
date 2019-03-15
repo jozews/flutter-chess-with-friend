@@ -3,8 +3,6 @@ import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'Const.dart';
-
 
 class Defaults {
 
@@ -13,6 +11,8 @@ class Defaults {
   static const AUTO_ROTATES = "auto_rotates";
   static const INDEX_ACCENT = "index_accent";
   static const INDEX_NAME_PIECES = "index_name_pieces";
+  static const SCORE_LOCAL = "score_local";
+  static const SCORE_REMOTE = "score_remote";
 
   bool showsValidMoves;
   bool showsTagSquares;
@@ -43,6 +43,15 @@ class Defaults {
     completer.complete(prefs.getBool(key));
     return completer.future;
   }
+
+  static Future<double> getDouble(String key) async {
+    var completer = new Completer<double>();
+    var prefs = await SharedPreferences.getInstance();
+    completer.complete(prefs.getDouble(key));
+    return completer.future;
+  }
+
+
   // SET
   // ..
   // ..
@@ -66,6 +75,14 @@ class Defaults {
     var completer = new Completer();
     var prefs = await SharedPreferences.getInstance();
     prefs.setBool(key, value);
+    completer.complete();
+    return completer.future;
+  }
+
+  static Future setDouble(String key, double value) async {
+    var completer = new Completer();
+    var prefs = await SharedPreferences.getInstance();
+    prefs.setDouble(key, value);
     completer.complete();
     return completer.future;
   }

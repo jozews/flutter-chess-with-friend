@@ -28,7 +28,6 @@ class StateWidgetHistory extends State<WidgetHistory> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return Material(
       child: Container(
         child: SafeArea(
