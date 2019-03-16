@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:math';
 
+
 class MoveTimer {
 
   double timestampStarted;
@@ -12,11 +13,13 @@ class MoveTimer {
   double get duration => timestampEnded - timestampStarted;
 }
 
+
 enum ControlTimer {
   min1, min1plus1, min3, min3plus2, min5, min5plus2, min10, min15
 }
 
-class Timer {
+
+class TimerGame {
 
   static double get timestampNow => DateTime.now().millisecondsSinceEpoch/1000.0;
 
@@ -27,12 +30,12 @@ class Timer {
 
   ControlTimer control;
 
-  Timer({this.timeTotal = 500.0, this.incrementOnStart = 0.0, this.incrementOnEnd = 0.0}) {
+  TimerGame({this.timeTotal = 500.0, this.incrementOnStart = 0.0, this.incrementOnEnd = 0.0}) {
     timeLight = timeTotal;
     timeDark = timeTotal;
   }
 
-  Timer.control(this.control) {
+  TimerGame.control(this.control) {
     switch (control) {
       case ControlTimer.min1:
         timeTotal = 1*60.0;
@@ -116,7 +119,7 @@ class Timer {
       var timeUpdated = timeOnStart - (timestampNow - timestampStart);
       var timeUpdatedFloored = timeUpdated.floor();
 
-      if (!stopped && timeUpdatedFloored != getTime(isLightTicking).floor()) {
+      if (timeUpdatedFloored != getTime(isLightTicking).floor()) {
         setTime(isLightTicking, timeUpdated);
         streamController.add(timeUpdatedFloored);
       }

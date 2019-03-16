@@ -735,16 +735,15 @@ class Game {
 
   bool isThereSufficientMaterialToCheckmate({bool isLight}) {
     var pieces = getEntriesFiltered(isLight: isLight);
-    if (pieces.length > 2) {
-      return true;
+    if (pieces.length == 1) {
+      return false;
     }
     var isThereAKnight = pieces.where((piece) => piece.value.type == TypePiece.knight).isNotEmpty;
     var isThereABishop = pieces.where((piece) => piece.value.type == TypePiece.bishop).isNotEmpty;
-    if (!isThereAKnight && !isThereABishop) {
-      // we assume one is a king, knight and bishop are not enough for checkmate
-      return true;
+    if (pieces.length == 2 && (isThereAKnight || isThereABishop)) {
+      return false;
     }
-    return false;
+    return true;
   }
 
 

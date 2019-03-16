@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:utf/utf.dart';
 
 import 'Game.dart';
-import 'Timer.dart';
+import 'TimerGame.dart';
 
 
 enum TypePayloadGame {

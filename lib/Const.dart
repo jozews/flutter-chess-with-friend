@@ -16,6 +16,7 @@ class Const {
   static const SIZE_ICON_MENU = 30.0;
   static const SIZE_NOTATION = 19.0;
   static const SIZE_TIME = 26.0;
+  static const SIZE_NAME_CONNECTION = 18.0;
   static const SIZE_TITLE = 15.0;
   static const SIZE_SUBTITLE = 14.0;
   static const SIZE_ACCENT = 25.0;
@@ -24,9 +25,9 @@ class Const {
   static const SIZE_TAG_SQUARE = 10.0;
 
   static const INSET_DIVISOR_ITEM_MENU = 12.0;
-  static const INSET_VERTICAL_TIME = 12.0;
+  static const INSET_EDGE_SIDE = 12.0;
+  static const INSET_SIDE = 6.0;
   static const INSET_NOTATION = 5.0;
-  static const INSET_ALERT_TEXT = 25.0;
   static const INSET_NOTATION_START = 50.0;
   static const INSET_NOTATIONS_END = 5.0;
   static const INSET_ICON_MENU = 10.0;

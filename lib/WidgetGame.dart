@@ -6,18 +6,21 @@ import 'package:device_info/device_info.dart';
 import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
-import 'Timer.dart';
+import 'TimerGame.dart';
 import 'Defaults.dart';
 import 'Const.dart';
 import 'Utils.dart';
 import 'Nearby.dart';
 import 'Connection.dart';
 import 'PayloadGame.dart';
-import 'History.dart';
 
 import 'WidgetHistory.dart';
 import 'WidgetDefaults.dart';
 
+
+enum TypeStateWidgetGame {
+  setup, ongoing, ended
+}
 
 class WidgetGame extends StatefulWidget {
   WidgetGame({Key key}) : super(key: key);
@@ -29,12 +32,14 @@ class WidgetGame extends StatefulWidget {
 
 class StateWidgetGame extends State<WidgetGame> {
 
+  static const MILLISECONDS_DELAY_NEW_GAME = 0; // wait a bit to make proper layout
+
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   // MODEL
   // ...
   Game game;
-  Timer timer;
+  TimerGame timer;
 
   // BOARD
   // ...
@@ -58,6 +63,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // TIME
   // ...
   ControlTimer controlTimer = ControlTimer.min5; // defaults blitz
+  var areControlsShowing = false;
 
   // CONNECTION
   Connection connection;
@@ -72,14 +78,19 @@ class StateWidgetGame extends State<WidgetGame> {
 
   // ALERT
   // ...
-  String titleAlert;
-
-  // BOOL
+  String titleAlert = "Hello World!\n"
+      "Hello back";
+  
+  // TYPE STATE
   // ...
-  var isTimeShowing = false;
-  var isGameSetup = false;
-  var isGameOngoing = false;
+  TypeStateWidgetGame typeState;
+
+  // MENU
+  // ...
   var isMenuShowing = false;
+
+  // ORIENTATION
+  // ...
   var isOrientationLight = true;
 
   // DEFAULTS
@@ -93,7 +104,12 @@ class StateWidgetGame extends State<WidgetGame> {
   MaterialAccentColor get accentBoard => defaults.indexAccent != null ?Const.ACCENTS[defaults.indexAccent] : null;
 
   bool get isConnected => connection != null;
+  bool get isGameOngoing => typeState == TypeStateWidgetGame.ongoing;
+  bool get isGameEnded => typeState == TypeStateWidgetGame.ended;
+  bool get isLeftToMove => isOrientationLight && game.isLightToMove;
+  bool get isLeftWhite => isOrientationLight;
 
+  bool get isAlertShowing => titleAlert != null;
   String get keyScoreLocal => "${Defaults.SCORE_LOCAL}${connection.idDevice}";
   String get keyScoreRemote => "${Defaults.SCORE_REMOTE}${connection.idDevice}";
 
@@ -120,25 +136,30 @@ class StateWidgetGame extends State<WidgetGame> {
   double get sizePiece => heightSquare * 9/10;
   double get sizeDotSquareValid => heightSquare / 4;
 
-  bool get isLeftToMove => (isOrientationLight && game.isLightToMove);
-
-  bool get isAlertShowing => titleAlert != null;
-
-  bool get shouldMenuShowItemNew => !isConnected && !isGameSetup;
-  bool get shouldMenuShowItemEnd => !isConnected && isGameOngoing;
+  bool get shouldMenuShowItemNew => !isConnected && typeState == TypeStateWidgetGame.ended;
+  bool get shouldMenuShowItemEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
   bool get shouldMenuShowItemResign => isConnected && isGameOngoing;
   bool get shouldMenuShowItemDraw => isConnected && isGameOngoing;
   bool get shouldMenuShowItemTime => !isGameOngoing;
-  bool get shouldMenuShowItemHistory => !isConnected && !isGameOngoing;
-  bool get shouldShowDim => isAlertShowing || isMenuShowing || isTimeShowing;
+  bool get shouldMenuShowItemHistory => false; // !isConnected && !isGameOngoing;
+  bool get shouldShowDim => isAlertShowing || isMenuShowing || areControlsShowing;
+  bool get shouldAlertShowNew => true;
 
-  get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
-  get colorBackground2 => Colors.white;
-  get colorSelection => accentBoard.shade700.withAlpha((0.75 * 255).toInt());
-  get colorSquareValid => accentBoard.shade400.withAlpha((0.95 * 255).toInt());
-  get colorLastMove => colorSquareValid;
-  get colorSquareCheck => Colors.red.withAlpha((0.75 * 255).toInt());
-  get colorTagSquare => accentBoard.shade700;
+  Color get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
+  Color get colorBackground2 => Colors.white;
+  Color get colorSelection => accentBoard.shade700.withAlpha((0.75 * 255).toInt());
+  Color get colorSquareValid => accentBoard.shade400.withAlpha((0.95 * 255).toInt());
+  Color get colorLastMove => colorSquareValid;
+  Color get colorSquareCheck => Colors.red.withAlpha((0.75 * 255).toInt());
+  Color get colorTagSquare => accentBoard.shade700;
+
+  double get insetIconMenu => (heightSquare - Const.SIZE_ICON_MENU)/2;
+  double get insetTimeEdge => (heightSquare - Const.SIZE_TIME)/2;
+  double get insetTimeNonEdge => heightSquare;
+  double get insetNameConnectionEdge => (heightSquare - Const.SIZE_NAME_CONNECTION)/2;
+  double get insetTitleAlert => heightSquare*1/3;
+  double get insetActionAlert => heightSquare*1/3;
+
 
   // STATE
   // ...
@@ -173,7 +194,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 shouldShowDim ? widgetDim() : Container(),
                 isMenuShowing ? widgetMenu() : Container(),
                 isAlertShowing ? widgetAlert() : Container(),
-                isTimeShowing ? widgetTime() : Container(),
+                areControlsShowing ? widgetTime() : Container(),
                 widgetIconMenu(),
               ],
             )
@@ -202,8 +223,8 @@ class StateWidgetGame extends State<WidgetGame> {
             size: Const.SIZE_ICON_MENU,
           ),
           padding: EdgeInsets.only(
-            top: Const.INSET_ICON_MENU,
-            left: Const.INSET_ICON_MENU
+            top: insetIconMenu,
+            left: insetIconMenu
           ),
         ),
         onTap: () {
@@ -244,30 +265,65 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   Widget widgetSide({bool atLeft = true}) {
+    var name = "";
+    var score = "";
+    if (isConnected) {
+      var isLocal = connection.isLocalLight == (atLeft == isLeftWhite);
+      name = isLocal ? "You" : connection.nameEndpoint;
+      var scoreValue = isLocal ? connection.scoreLocal : connection.scoreRemote;
+      if (scoreValue != null) {
+        if (scoreValue % 1.0 == 0.0) {
+          score = scoreValue.toInt().toString();
+        }
+        else {
+          score = scoreValue.toString();
+        }
+      }
+    }
     return Expanded(
       child: Container(
         child: Stack(
           children: <Widget>[
-            timer != null ? Align(
+            Align(
               alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
-                  child: Container(
-                    child: Text(
-                      atLeft ? (isOrientationLight
-                          ? getFormattedInterval(timer.timeLight)
-                          : getFormattedInterval(timer.timeDark))
-                          : (!isOrientationLight ? getFormattedInterval(timer.timeLight)
-                          : getFormattedInterval(timer.timeDark)),
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: Const.SIZE_TIME,
-                          fontWeight: FontWeight.w500
+                child: Column(
+                  children: <Widget>[
+                    isConnected ? Container(
+                      child: Text(
+                        "$name - $score",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: Const.SIZE_NAME_CONNECTION,
+                            fontWeight: FontWeight.w600
+                        ),
                       ),
-                    ),
-                    margin: EdgeInsets.symmetric(
-                        vertical: Const.INSET_VERTICAL_TIME
-                    ),
-                  ),
-            ) : Container(),
+                      margin: EdgeInsets.only(
+                        bottom: atLeft ? insetNameConnectionEdge : 0.0,
+                        top: !atLeft ? insetNameConnectionEdge : 0.0,
+                      ),
+                    ) : Container(),
+                    timer != null ? Container(
+                      child: Text(
+                        atLeft ? (isOrientationLight
+                            ? getFormattedInterval(timer.timeLight)
+                            : getFormattedInterval(timer.timeDark))
+                            : (!isOrientationLight ? getFormattedInterval(timer.timeLight)
+                            : getFormattedInterval(timer.timeDark)),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: Const.SIZE_TIME,
+                            fontWeight: FontWeight.w500
+                        ),
+                      ),
+                      margin: EdgeInsets.only(
+                        bottom: atLeft ? isConnected ? heightSquare : insetTimeEdge : 0.0,
+                        top: !atLeft ? isConnected ? heightSquare : insetTimeEdge : 0.0,
+                      ),
+                    ) : Container(),
+                  ],
+                  verticalDirection: atLeft ? VerticalDirection.up : VerticalDirection.down,
+                )
+            ),
             notations != null ? Align(
               alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
               child: Container(
@@ -568,20 +624,56 @@ class StateWidgetGame extends State<WidgetGame> {
     return Center(
       child: ClipRRect(
         borderRadius: BorderRadius.all(
-          Radius.circular(
-            Const.RADIUS_SOFT
-          )
+            Radius.circular(
+                Const.RADIUS_SOFT
+            )
         ),
         child: Container(
           child: Container(
-            child: Text(
-              getTitleAlert(),
-              style: TextStyle(
-                  color: Colors.white
-              ),
+            child: Column(
+              children: <Widget>[
+                Container(
+                  child: Text(
+                    titleAlert,
+                    style: TextStyle(
+                        color: Colors.white
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  padding: EdgeInsets.all(
+                    insetTitleAlert,
+                  ),
+                ),
+                shouldAlertShowNew ? Flexible(
+                  child: Container(
+                    color: Colors.white,
+                    height: Const.SIZE_DIVISOR,
+                  ),
+                ) : Container(),
+                GestureDetector(
+                  child: Container(
+                    child: Text(
+                      "new",
+                      style: TextStyle(
+                          color: Colors.white
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    padding: EdgeInsets.all(
+                      insetActionAlert,
+                    ),
+                  ),
+                  onTap: () {
+                    if (isGameEnded) {
+                      newGame();
+                    }
+                  },
+                ),
+              ],
+              mainAxisSize: MainAxisSize.min,
             ),
             color: colorBackground1,
-            padding: EdgeInsets.all(Const.INSET_ALERT_TEXT),
+            width: heightSquare * 4,
           ),
           color: colorBackground2,
         ),
@@ -610,7 +702,9 @@ class StateWidgetGame extends State<WidgetGame> {
                     height: heightWidgetTimeItem,
                   ),
                   onTap: () {
-                    onTapItemTimeControl(control);
+                    onTapItemTimeControl(
+                        control
+                    );
                   },
                 );
               }).toList(),
@@ -774,7 +868,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   onTapDownBoard(TapDownDetails tap) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || !isGameSetup) {
+    if (!isLastPosition || isGameEnded) {
       return;
     }
     var offset = offsetFromGlobalPosition(tap.globalPosition);
@@ -813,7 +907,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapUpBoard(TapUpDetails tap) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || !isGameSetup) {
+    if (!isLastPosition || isGameEnded) {
       return;
     }
     if (squaresSelected.length == 2) {
@@ -831,7 +925,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanStartBoard(DragStartDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || !isGameSetup) {
+    if (!isLastPosition || isGameEnded) {
       return;
     }
     var offset = offsetFromGlobalPosition(pan.globalPosition);
@@ -857,7 +951,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanUpdateBoard(DragUpdateDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || !isGameSetup) {
+    if (!isLastPosition || isGameEnded) {
       return;
     }
     var offset = offsetFromGlobalPosition(pan.globalPosition);
@@ -894,7 +988,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanEndBoard(DragEndDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || !isGameSetup) {
+    if (!isLastPosition || isGameEnded) {
       return;
     }
     if (squaresSelected.isNotEmpty && piecePanning != null) {
@@ -929,8 +1023,8 @@ class StateWidgetGame extends State<WidgetGame> {
       if (isAlertShowing) {
         titleAlert = null;
       }
-      else if (isTimeShowing) {
-        isTimeShowing = false;
+      else if (areControlsShowing) {
+        areControlsShowing = false;
       }
       else if (isMenuShowing) {
         isMenuShowing = false;
@@ -941,7 +1035,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapIconMenu() {
     setState(() {
-      isTimeShowing = false;
+      areControlsShowing = false;
       isMenuShowing = !isMenuShowing;
     });
   }
@@ -981,7 +1075,7 @@ class StateWidgetGame extends State<WidgetGame> {
   onTapItemMenuTime() {
     setState(() {
       this.isMenuShowing = false;
-      this.isTimeShowing = true;
+      this.areControlsShowing = true;
     });
   }
 
@@ -1014,8 +1108,8 @@ class StateWidgetGame extends State<WidgetGame> {
   onTapItemTimeControl(ControlTimer controlTimer) {
     this.controlTimer = controlTimer;
     setState(() {
-      this.isTimeShowing = false;
-      this.timer = Timer.control(this.controlTimer);
+      this.areControlsShowing = false;
+      this.timer = TimerGame.control(this.controlTimer);
     });
   }
 
@@ -1125,12 +1219,8 @@ class StateWidgetGame extends State<WidgetGame> {
   disconnect() {
 
     if (isGameOngoing) {
-      abortGame();
+      endGame(isAbort: true);
     }
-
-    setState(() {
-      connection = null;
-    });
 
     showSnackBar(
         widgetConnectionLost(isAbort: isGameOngoing)
@@ -1154,13 +1244,13 @@ class StateWidgetGame extends State<WidgetGame> {
       case TypePayloadGame.setControl:
         if (canPayloadGameSetControl) {
           setState(() {
-            timer = Timer.control(payloadGame.control);
+            timer = TimerGame.control(payloadGame.control);
           });
         }
         break;
       case TypePayloadGame.newGame:
         if (canPayloadGameNewGame) {
-          newGame();
+          newGame(payload: payloadGame);
         }
         break;
       case TypePayloadGame.startMove:
@@ -1219,15 +1309,22 @@ class StateWidgetGame extends State<WidgetGame> {
     defaults = Defaults();
     await defaults.getBoard();
     setState(() { });
-    await Future.delayed(Duration(milliseconds: 0)); // wait a bit to make proper layout
+    await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
     newGame();
   }
   
   
-  newGame() async {
+  newGame({PayloadGame payload}) async {
+
+    var isLocal = payload != null;
+
+    if (isConnected && isLocal) {
+      var payloadNew = PayloadGame.newGame();
+      sendPayload(payloadNew);
+    }
 
     game = Game.standard();
-    timer = Timer.control(controlTimer);
+    timer = TimerGame.control(controlTimer);
 
     positions = [game.board];
     setOffsetsOfPosition();
@@ -1237,7 +1334,7 @@ class StateWidgetGame extends State<WidgetGame> {
       squaresValid = [];
       indexFirstNotationLeft = 0;
       indexFirstNotationRight = 0;
-      isGameSetup = true;
+      typeState = TypeStateWidgetGame.setup;
       this.offsets = offsets;
       notations = [];
       timer.timeTotal = timer.timeTotal;
@@ -1248,11 +1345,13 @@ class StateWidgetGame extends State<WidgetGame> {
 
   startGame({PayloadGame payload}) {
 
-    var isLocal = payload == null;
 
     setState(() {
-      isGameOngoing = true;
-      connection.isLocalLight = isLocal ? true : false;
+      typeState = TypeStateWidgetGame.ongoing;
+      if (isConnected) {
+        var isLocal = payload == null;
+        connection.isLocalLight = isLocal ? true : false;
+      }
     });
 
     // first move starts and end at the same time (almost - when payload is not null)
@@ -1264,6 +1363,7 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
+
   listenTimer() {
 
     setState(() {
@@ -1271,7 +1371,9 @@ class StateWidgetGame extends State<WidgetGame> {
       timer.timeDark = max(0.0, timer.timeDark);
     });
 
-    var isTimeLightOver = timer.timeLight.isNegative || timer.timeDark.isNegative ? timer.timeLight.isNegative : null;
+    var isTimeLightOver = timer.timeLight == 0.0 ? true
+        : timer.timeDark == 0.0 ? false
+        : null;
 
     if (isTimeLightOver != null) {
       if (isConnected && connection.isLocalLight == isTimeLightOver) {
@@ -1283,6 +1385,7 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
   }
+
 
   String moveGame(Move move, {PayloadGame payload}) {
 
@@ -1298,23 +1401,28 @@ class StateWidgetGame extends State<WidgetGame> {
 
     if (movePNG != null) {
 
+      var timestampNow = TimerGame.timestampNow;
+
       if (!isGameOngoing) {
         startGame(payload: payload);
       }
-
-      // reset draw agreements
-      if (isConnected) {
-        connection.didLocalDraw = null;
-        connection.didRemoteDraw = null;
+      else {
+        // end move
+        timer.addTimestampEnd(timestamp: payload != null ? payload.timestampEnd : timestampNow);
       }
 
+      // start move
       if (!isConnected || !isLocal) {
-        var timestampNow = Timer.timestampNow;
         timer.addTimestampStart(timestamp: timestampNow);
         if (isConnected) {
           var payloadStart = PayloadGame.startMove(timestampNow);
           sendPayload(payloadStart);
         }
+      }
+
+      if (isConnected) {
+        connection.didLocalDraw = null;
+        connection.didRemoteDraw = null;
       }
 
       var wasLeftMove = !isLeftToMove;
@@ -1333,7 +1441,6 @@ class StateWidgetGame extends State<WidgetGame> {
       positions.add(position);
 
       if (game.state != StateGame.ongoing) {
-        connection.isLocalLight = null;
         endGame();
       }
     }
@@ -1386,7 +1493,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  endGame({bool isResignLocal, bool isDraw, bool isTimeLightOver}) async  {
+  endGame({bool isResignLocal, bool isTimeLightOver, bool isDraw = false, bool isAbort = false}) async  {
 
     setOffsetsOfPosition();
     timer.stop();
@@ -1446,7 +1553,6 @@ class StateWidgetGame extends State<WidgetGame> {
         titleAlert = "Game drawn";
       }
       setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
-      saveGame(isResignLocal: isResignLocal, isDraw: isDraw);
     }
     else {
       if (game.state == StateGame.checkmate) {
@@ -1475,23 +1581,22 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
 
+    await saveGame(isAbort: isAbort, isTimeLightOver: isTimeLightOver, isDraw: isDraw, isResignLocal: isResignLocal);
+
     setState(() {
-      isGameSetup = false;
-      isGameOngoing = false;
+      typeState = TypeStateWidgetGame.ended;
       squaresSelected = [];
       squaresValid = [];
       this.titleAlert = titleAlert;
+      if (isAbort) {
+        connection = null;
+      }
     });
   }
 
 
-  saveGame({bool isResignLocal, bool isDraw}) async {
-    History.saveGame(game, connection.idEndpoint, isResignLocal: isResignLocal, isDraw: isDraw);
-  }
-
-
-  abortGame() async {
-    History.saveGame(game, connection.idEndpoint, isAbort: true);
+  saveGame({bool isResignLocal, bool isDraw, bool isTimeLightOver, bool isAbort}) async {
+//    History.saveGame(game, connection, isResignLocal: isResignLocal, isDraw: isDraw, isTimeLightOver: isTimeLightOver, isAbort: isAbort);
   }
 
   
