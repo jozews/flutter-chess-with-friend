@@ -17,7 +17,7 @@ void main() {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
       var move = game.getMoveFromNotation(notation);
-      notation = game.move(move);
+      notation = game.makeMove(move);
       expect(notation != null, true);
     }
 
@@ -34,7 +34,7 @@ void main() {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
       var move = game.getMoveFromNotation(notation);
-      notation = game.move(move);
+      notation = game.makeMove(move);
       expect(notation != null, true);
     }
 
@@ -51,7 +51,7 @@ void main() {
       print("Making move $notation");
       expect(game.state, StateGame.ongoing);
       var move = game.getMoveFromNotation(notation);
-      notation = game.move(move);
+      notation = game.makeMove(move);
       expect(notation != null, true);
     }
 

@@ -8,7 +8,7 @@ import 'Timer.dart';
 
 
 enum TypePayloadGame {
-  setIdDevice, setControl, newGame, startMove, endMove, resign, draw
+  setIdDevice, setControl, newGame, startMove, endMove, endTime, resign, draw
 }
 
 class PayloadGame {
@@ -32,20 +32,24 @@ class PayloadGame {
     this.type = TypePayloadGame.newGame;
   }
 
-  PayloadGame.resign() {
-    this.type = TypePayloadGame.resign;
-  }
-
-  PayloadGame.draw() {
-    this.type = TypePayloadGame.draw;
+  PayloadGame.startMove(this.timestampStart) {
+    this.type = TypePayloadGame.startMove;
   }
 
   PayloadGame.endMove(this.move, this.timestampEnd) {
     this.type = TypePayloadGame.endMove;
   }
 
-  PayloadGame.startMove(this.timestampStart) {
-    this.type = TypePayloadGame.startMove;
+  PayloadGame.endTime() {
+    this.type = TypePayloadGame.endTime;
+  }
+
+  PayloadGame.resign() {
+    this.type = TypePayloadGame.resign;
+  }
+
+  PayloadGame.draw() {
+    this.type = TypePayloadGame.draw;
   }
 
   PayloadGame.fromBytes(Uint8List list) {

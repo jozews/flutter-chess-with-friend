@@ -41,47 +41,58 @@ Map<Square, Piece> getPiecesStandard() {
   return pieces;
 }
 
+
 List<Square> getDeltasPin() {
   return getDeltasQueen();
 }
+
 
 List<Square> getDeltasCheck() {
   return getDeltasQueen() + getDeltasKnight();
 }
 
+
 List<Square> getDeltasKing() {
   return [Square(1, 1), Square(1, 0), Square(1, -1), Square(0, 1), Square(0, -1), Square(-1, 1), Square(-1, 0), Square(-1, -1)];
 }
+
 
 List<Square> getDeltasKingCastle() {
   return [Square(1, 0), Square(-1, 0)];
 }
 
+
 List<Square> getDeltasQueen() {
   return [Square(1, 1), Square(1, 0), Square(1, -1), Square(0, 1), Square(0, -1), Square(-1, 1), Square(-1, 0), Square(-1, -1)];
 }
+
 
 List<Square> getDeltasRook() {
   return [Square(1, 0), Square(0, 1), Square(0, -1), Square(-1, 0)];
 }
 
+
 List<Square> getDeltasBishop() {
   return [Square(1, 1), Square(1, -1), Square(-1, 1), Square(-1, -1)];
 }
 
+
 List<Square> getDeltasKnight() {
   return [Square(2, 1), Square(2, -1), Square(1, 2), Square(1, -2), Square(-1, 2), Square(-1, -2), Square(-2, 1), Square(-2, -1)];
 }
+
 
 List<Square> getDeltasPawn({bool isLight}) {
   var deltaRow = isLight? 1 : -1;
   return [Square(1, deltaRow), Square(-1, deltaRow), Square(0, deltaRow)];
 }
 
+
 List<Square> getDeltasPawnCapture({bool isLight}) {
   var deltaRow = isLight ? 1 : -1;
   return [Square(1, deltaRow), Square(-1, deltaRow)];
 }
+
 
 List<Square> getDeltasForPiece(Piece piece, {bool isCheck}) {
 
@@ -116,6 +127,7 @@ Square getDeltaReducedFromMove(Move move) {
   return Square(columnDelta, rowDelta);
 }
 
+
 bool isDeltaValidForKingMove(Move move, {bool isCastle = false}) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
@@ -125,9 +137,11 @@ bool isDeltaValidForKingMove(Move move, {bool isCastle = false}) {
   return difsColumns.abs() <= 1 && diffRows.abs() <= 1;
 }
 
+
 bool isDeltaValidForQueenMove(Move move) {
   return isDeltaValidForRookMove(move) || isDeltaValidForBishopMove(move);
 }
+
 
 bool isDeltaValidForRookMove(Move move) {
   var difsColumns = move.square2.column - move.square1.column;
@@ -135,17 +149,20 @@ bool isDeltaValidForRookMove(Move move) {
   return (difsColumns.abs() > 0 && diffRows == 0) || (difsColumns == 0 && diffRows.abs() > 0);
 }
 
+
 bool isDeltaValidForBishopMove(Move move) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
   return difsColumns.abs() == diffRows.abs();
 }
 
+
 bool isDeltaValidForKnightMove(Move move) {
   var difsColumns = move.square2.column - move.square1.column;
   var diffRows = move.square2.row - move.square1.row;
   return (difsColumns.abs() == 2 && diffRows.abs() == 1) || (difsColumns.abs() == 1 && diffRows.abs() == 2);
 }
+
 
 bool isDeltaValidForPawnMove(Move move, {bool isLight, bool isCapture}) {
   var diffsColumns = move.square2.column - move.square1.column;
@@ -157,10 +174,12 @@ bool isDeltaValidForPawnMove(Move move, {bool isLight, bool isCapture}) {
   return diffsColumns == 0 && (diffRows == 1*direction || diffRows == 2*direction);
 }
 
+
 bool isDeltaValidForCaptureEnPassant(Square square2, Square squareEnPassant, {bool isLight}) {
   var direction = isLight ? 1 : -1;
   return square2.column - squareEnPassant.column == 0 && (square2.row - squareEnPassant.row) == 1*direction;
 }
+
 
 bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bool isCapture}) {
 
@@ -188,9 +207,13 @@ bool isDeltaValidForPieceMove(Piece piece, Move move, {bool isCastle = false, bo
     throw Exception("Non exhaustive switch");
 }
 
+
+
 enum TypePiece {
   king, queen, bishop, knight, rook, pawn
 }
+
+
 
 class Piece {
 
@@ -218,9 +241,13 @@ class Piece {
   }
 }
 
+
+
 enum StateGame {
-  ongoing, checkmate, stalemate
+  ongoing, checkmate, stalemate, insufficientMaterial
 }
+
+
 
 class Square {
 
@@ -255,6 +282,7 @@ class Square {
 }
 
 
+
 class Move {
 
   Square square1;
@@ -272,6 +300,7 @@ class Move {
 }
 
 
+
 class Game {
 
   Map<Square, Piece> board;
@@ -287,7 +316,7 @@ class Game {
   }
 
 
-  List<MapEntry<Square, Piece>> getEntriesFiltered(TypePiece type, bool isLight) {
+  List<MapEntry<Square, Piece>> getEntriesFiltered({TypePiece type, bool isLight}) {
     return board.entries.where((entry) {
       var piece = entry.value;
       if ((type == null || piece.type == type) && (isLight == null || piece.isLight == isLight)) {
@@ -297,14 +326,17 @@ class Game {
     }).toList();
   }
 
+
   Piece getPieceAtSquare(Square square) {
     return board[square];
   }
-  
+
+
   Square getSquareOfPiece(Piece piece) {
     var entriesFiltered = board.entries.where((entry) => entry.value == piece).toList();
     return entriesFiltered.isNotEmpty ? entriesFiltered.first.key : null;
   }
+
 
   List<Square> getSquaresFromSquareWithDelta(Square square1, Square delta, {int limit = -1, Square stopBeforeSquare, bool stopBeforePiece = false, bool stopBeforePieceIsLight, bool stopAfterPiece = false, bool stopAfterPieceIsLight, Piece ignorePiece, bool addSquare1 = false}) {
     var squares = List<Square>();
@@ -335,6 +367,7 @@ class Game {
     return squares;
   }
 
+
   bool areSquaresEmpty(List<Square> squares) {
     for (Square square in squares) {
       if (board[square] != null) {
@@ -344,6 +377,7 @@ class Game {
     return true;
   }
 
+
   List<Piece> getPiecesInSquares(List<Square> squares) {
     return squares.map<Piece>((square) => board[square]).where((piece) => piece != null).toList();
   }
@@ -351,7 +385,7 @@ class Game {
 
   List<List<Square>> getChecks(Square square, bool isLight) {
 
-    var king = getEntriesFiltered(TypePiece.king, isLight).first.value;
+    var king = getEntriesFiltered(type: TypePiece.king, isLight: isLight).first.value;
 
     var checks = List<List<Square>>();
 
@@ -380,7 +414,7 @@ class Game {
   List<Square> getPin(Piece piece) {
 
     var squarePiece = getSquareOfPiece(piece);
-    var squareKing = getEntriesFiltered(TypePiece.king, piece.isLight).first.key;
+    var squareKing = getEntriesFiltered(type: TypePiece.king, isLight: piece.isLight).first.key;
 
     var moveToKing = Move(squarePiece, squareKing);
     var deltaToKing = getDeltaReducedFromMove(moveToKing);
@@ -433,6 +467,7 @@ class Game {
     return true;
   }
 
+
   Piece canCaptureEnPassant() {
 
     if (moves.isEmpty) {
@@ -454,10 +489,12 @@ class Game {
     return pieceMoveLast;
   }
 
+
   bool canDoubleMove(Square square1) {
     var pieceToMove = board[square1];
     return pieceToMove.squareFirst == square1;
   }
+
 
   bool isMoveValid(Move move) {
 
@@ -476,7 +513,7 @@ class Game {
       return false;
     }
         
-    var squareKing = getEntriesFiltered(TypePiece.king, isLightToMove).first.key;
+    var squareKing = getEntriesFiltered(type: TypePiece.king, isLight: isLightToMove).first.key;
     var checks = getChecks(squareKing, isLightToMove);
 
     // king must step out of double check
@@ -679,12 +716,14 @@ class Game {
     return isPiecePawn && isSquareFinalPromotionRow;
   }
 
+
   // * does not validates
   bool isMoveCastling(Move move) {
     var piece = board[move.square1];
     var isColumnDelta2 = (move.square1.column - move.square2.column).abs() == 2;
     return piece.type == TypePiece.king && isColumnDelta2;
   }
+
 
   // * does not validates
   bool isMoveEnPassant(Move move) {
@@ -694,7 +733,22 @@ class Game {
     return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
   }
 
-  String move(Move move) {
+  bool isThereSufficientMaterialToCheckmate({bool isLight}) {
+    var pieces = getEntriesFiltered(isLight: isLight);
+    if (pieces.length > 2) {
+      return true;
+    }
+    var isThereAKnight = pieces.where((piece) => piece.value.type == TypePiece.knight).isNotEmpty;
+    var isThereABishop = pieces.where((piece) => piece.value.type == TypePiece.bishop).isNotEmpty;
+    if (!isThereAKnight && !isThereABishop) {
+      // we assume one is a king, knight and bishop are not enough for checkmate
+      return true;
+    }
+    return false;
+  }
+
+
+  String makeMove(Move move) {
 
     // validate move
     if (!isMoveValid(move)) {
@@ -704,7 +758,7 @@ class Game {
     var pieceToMove = board[move.square1];
 
     // for png
-    var entriesOtherWithValidSquare2 = getEntriesFiltered(pieceToMove.type, pieceToMove.isLight)
+    var entriesOtherWithValidSquare2 = getEntriesFiltered(type: pieceToMove.type, isLight: pieceToMove.isLight)
         .where((entryPiece) => entryPiece.value != pieceToMove)
         .where((entryPiece) => isMoveValid(Move(entryPiece.key, move.square2))).toList();
 
@@ -736,10 +790,10 @@ class Game {
     // toggle isLightToMove
     isLightToMove = !isLightToMove;
     
-    var squareKing = getEntriesFiltered(TypePiece.king, isLightToMove).first.key;
+    var squareKing = getEntriesFiltered(type: TypePiece.king, isLight: isLightToMove).first.key;
     var checks = getChecks(squareKing, isLightToMove);
 
-    var entriesPiecesToMove = getEntriesFiltered(null, isLightToMove);
+    var entriesPiecesToMove = getEntriesFiltered(isLight: isLightToMove);
 
     var areThereValidMoves = false;
     for (MapEntry<Square, Piece> entryPiece in entriesPiecesToMove) {
@@ -754,8 +808,12 @@ class Game {
         state = StateGame.checkmate;
       }
       else {
-        state = StateGame.ongoing;
+        state = StateGame.stalemate;
       }
+    }
+
+    if (!isThereSufficientMaterialToCheckmate(isLight: true) && !isThereSufficientMaterialToCheckmate(isLight: false)) {
+      state = StateGame.insufficientMaterial;
     }
 
     var notationType = pieceToMove.notationType;
@@ -816,7 +874,7 @@ class Game {
 
       // get square initial
       // ...
-      var entries = getEntriesFiltered(typePiece, isLightToMove);
+      var entries = getEntriesFiltered(type: typePiece, isLight: isLightToMove);
       if (entries.isEmpty) {
         print(entries);
         throw Exception("Invalid PNG move");
@@ -843,7 +901,7 @@ class Game {
     
     // castle
     else {
-      var entryKing = getEntriesFiltered(TypePiece.king, isLightToMove).first;
+      var entryKing = getEntriesFiltered(type: TypePiece.king, isLight: isLightToMove).first;
       squareInitial = entryKing.key;
       var deltaColumns = isShortCastle ? 2 : -2;
       squareFinal = Square(squareInitial.column + deltaColumns, squareInitial.row);

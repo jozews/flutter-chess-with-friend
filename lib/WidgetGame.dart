@@ -13,6 +13,7 @@ import 'Utils.dart';
 import 'Nearby.dart';
 import 'Connection.dart';
 import 'PayloadGame.dart';
+import 'History.dart';
 
 import 'WidgetHistory.dart';
 import 'WidgetDefaults.dart';
@@ -69,9 +70,12 @@ class StateWidgetGame extends State<WidgetGame> {
   int indexFirstNotationRight;
   int countColumnChildrenMax;
 
+  // ALERT
+  // ...
+  String titleAlert;
+
   // BOOL
   // ...
-  var isAlertShowing = false;
   var isTimeShowing = false;
   var isGameSetup = false;
   var isGameOngoing = false;
@@ -118,12 +122,14 @@ class StateWidgetGame extends State<WidgetGame> {
 
   bool get isLeftToMove => (isOrientationLight && game.isLightToMove);
 
-  bool get shouldMenuShowItemNew => !isGameSetup && !isConnected;
-  bool get shouldMenuShowItemEnd => isGameOngoing && !isConnected;
-  bool get shouldMenuShowItemResign => isGameOngoing && isConnected;
-  bool get shouldMenuShowItemDraw => isGameOngoing && isConnected;
+  bool get isAlertShowing => titleAlert != null;
+
+  bool get shouldMenuShowItemNew => !isConnected && !isGameSetup;
+  bool get shouldMenuShowItemEnd => !isConnected && isGameOngoing;
+  bool get shouldMenuShowItemResign => isConnected && isGameOngoing;
+  bool get shouldMenuShowItemDraw => isConnected && isGameOngoing;
   bool get shouldMenuShowItemTime => !isGameOngoing;
-  bool get shouldMenuShowItemHistory => !isGameOngoing && !isConnected;
+  bool get shouldMenuShowItemHistory => !isConnected && !isGameOngoing;
   bool get shouldShowDim => isAlertShowing || isMenuShowing || isTimeShowing;
 
   get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -569,7 +575,7 @@ class StateWidgetGame extends State<WidgetGame> {
         child: Container(
           child: Container(
             child: Text(
-              getAlertTitle(),
+              getTitleAlert(),
               style: TextStyle(
                   color: Colors.white
               ),
@@ -752,9 +758,10 @@ class StateWidgetGame extends State<WidgetGame> {
     );
   }
 
-  Widget widgetConnectionLost() {
+  Widget widgetConnectionLost({bool isAbort = false}) {
     return Text(
         "Connection lost",
+//        "Connection lost" + (isAbort ? ". Game aborted." : ""),
         textAlign: TextAlign.center
     );
   }
@@ -920,7 +927,7 @@ class StateWidgetGame extends State<WidgetGame> {
   onTapDim() {
     setState(() {
       if (isAlertShowing) {
-        isAlertShowing = false;
+        titleAlert = null;
       }
       else if (isTimeShowing) {
         isTimeShowing = false;
@@ -1048,7 +1055,7 @@ class StateWidgetGame extends State<WidgetGame> {
     Nearby.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
       switch (discovery.type) {
         case TypeDiscovery.found:
-          if (!isConnected) {
+          if (isConnected) {
             return;
           }
           requestConnection(discovery);
@@ -1117,16 +1124,16 @@ class StateWidgetGame extends State<WidgetGame> {
 
   disconnect() {
 
-    setState(() {
-      connection = null;
-    });
-
     if (isGameOngoing) {
       abortGame();
     }
 
+    setState(() {
+      connection = null;
+    });
+
     showSnackBar(
-        widgetConnectionLost()
+        widgetConnectionLost(isAbort: isGameOngoing)
     );
   }
 
@@ -1161,6 +1168,9 @@ class StateWidgetGame extends State<WidgetGame> {
         break;
       case TypePayloadGame.endMove:
         moveGame(payloadGame.move, payload: payloadGame);
+        break;
+      case TypePayloadGame.endTime:
+        endGame(isTimeLightOver: !connection.isLocalLight);
         break;
       case TypePayloadGame.resign:
         if (canPayloadGameResign) {
@@ -1245,25 +1255,34 @@ class StateWidgetGame extends State<WidgetGame> {
       connection.isLocalLight = isLocal ? true : false;
     });
 
-    // first move starts and end at the same time (almost when payload is not null)
+    // first move starts and end at the same time (almost - when payload is not null)
     timer.addTimestampStart(timestamp: payload != null ? payload.timestampEnd : null);
     timer.addTimestampEnd(timestamp: payload != null ? payload.timestampEnd : null);
 
     timer.start().listen((time) {
-      setState(() {
-        timer.timeLight = timer.timeLight;
-        timer.timeDark = timer.timeDark;
-      });
-      var isTimeOver = timer.timeLight == 0 || timer.timeDark == 0;
-      if (game.state == StateGame.ongoing && isAlertShowing != isTimeOver) {
-        endGame();
-        setState(() {
-          this.isAlertShowing = isTimeOver;
-        });
-      }
+      listenTimer();
     });
   }
 
+  listenTimer() {
+
+    setState(() {
+      timer.timeLight = max(0.0, timer.timeLight);
+      timer.timeDark = max(0.0, timer.timeDark);
+    });
+
+    var isTimeLightOver = timer.timeLight.isNegative || timer.timeDark.isNegative ? timer.timeLight.isNegative : null;
+
+    if (isTimeLightOver != null) {
+      if (isConnected && connection.isLocalLight == isTimeLightOver) {
+        var payloadEnd = PayloadGame.endTime();
+        sendPayload(payloadEnd);
+      }
+      if (!isConnected || connection.isLocalLight == isTimeLightOver) {
+        endGame(isTimeLightOver: isTimeLightOver);
+      }
+    }
+  }
 
   String moveGame(Move move, {PayloadGame payload}) {
 
@@ -1275,7 +1294,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
     var wasPositionLastShowing = indexPosition == positions.length - 1;
 
-    String movePNG = game.move(move);
+    String movePNG = game.makeMove(move);
 
     if (movePNG != null) {
 
@@ -1313,13 +1332,9 @@ class StateWidgetGame extends State<WidgetGame> {
       var position = Map<Square, Piece>.from(game.board);
       positions.add(position);
 
-      // show alert: CHECKMATE! or stalemate
       if (game.state != StateGame.ongoing) {
         connection.isLocalLight = null;
         endGame();
-        setState(() {
-          isAlertShowing = true;
-        });
       }
     }
 
@@ -1371,17 +1386,12 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  endGame({bool isResignLocal, bool isDraw}) async  {
+  endGame({bool isResignLocal, bool isDraw, bool isTimeLightOver}) async  {
 
     setOffsetsOfPosition();
     timer.stop();
 
-    setState(() {
-      isGameSetup = false;
-      isGameOngoing = false;
-      squaresSelected = [];
-      squaresValid = [];
-    });
+    String titleAlert;
 
     if (isConnected) {
 
@@ -1390,31 +1400,98 @@ class StateWidgetGame extends State<WidgetGame> {
 
       var scoreLocalUpdated = connection.scoreLocal;
       var scoreRemoteUpdated = connection.scoreRemote;
+
       if (game.state == StateGame.checkmate) {
-        scoreLocalUpdated += connection.isLocalLight == !game.isLightToMove ? 1.0 : 0.0;
-        scoreRemoteUpdated += !connection.isLocalLight == !game.isLightToMove ? 1.0 : 0.0;
+        var didLocalWin = connection.isLocalLight == !game.isLightToMove;
+        scoreLocalUpdated += didLocalWin ? 1.0 : 0.0;
+        scoreRemoteUpdated += !didLocalWin ? 1.0 : 0.0;
+        var nameWinner = didLocalWin ? "You" : connection.nameEndpoint;
+        titleAlert = "Checkmate!\n"
+            "$nameWinner win${didLocalWin ? "" : "s"}";
       }
       else if (isResignLocal != null) {
         scoreLocalUpdated += !isResignLocal ? 1.0 : 0.0;
         scoreRemoteUpdated += isResignLocal ? 1.0 : 0.0;
+        var nameWinner = !isResignLocal ? "You" : connection.nameEndpoint;
+        titleAlert = "Resignation!\n"
+            "$nameWinner win${isResignLocal ? "" : "s"}";
       }
-      else if (game.state == StateGame.stalemate || isDraw) {
+      else if (isTimeLightOver != null) {
+        if (game.isThereSufficientMaterialToCheckmate(isLight: !isTimeLightOver)) {
+          var didLocalWin = connection.isLocalLight == !isTimeLightOver;
+          var nameWinner = didLocalWin ? "You" : connection.nameEndpoint;
+          titleAlert = "Time over!\n"
+              "$nameWinner win${didLocalWin ? "" : "s"}";
+        }
+        else {
+          titleAlert = "Insufficient material\n"
+              "Game drawn";
+        }
+      }
+      else if (game.state == StateGame.stalemate) {
         scoreLocalUpdated += 0.5;
         scoreRemoteUpdated += 0.5;
+        titleAlert = "Stalemate\n"
+            "Game drawn";
+      }
+      else if (game.state == StateGame.insufficientMaterial) {
+        scoreLocalUpdated += 0.5;
+        scoreRemoteUpdated += 0.5;
+        titleAlert = "Insufficient material\n"
+            "Game drawn";
+      }
+      else if (isDraw != null && isDraw) {
+        scoreLocalUpdated += 0.5;
+        scoreRemoteUpdated += 0.5;
+        titleAlert = "Game drawn";
       }
       setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
-      saveGame();
+      saveGame(isResignLocal: isResignLocal, isDraw: isDraw);
     }
+    else {
+      if (game.state == StateGame.checkmate) {
+        var nameWinner = game.isLightToMove ? "Dark" : "Light";
+        titleAlert = "Checkmate!\n"
+            "$nameWinner wins";
+      }
+      else if (isTimeLightOver != null) {
+        if (game.isThereSufficientMaterialToCheckmate(isLight: !isTimeLightOver)) {
+          var nameWinner = isTimeLightOver ? "Dark" : "Light";
+          titleAlert = "Time over!\n"
+              "$nameWinner wins";
+        }
+        else {
+          titleAlert = "Insufficient material\n"
+              "Game drawn";
+        }
+      }
+      else if (game.state == StateGame.stalemate) {
+        titleAlert = "Stalemate\n"
+            "Game drawn";
+      }
+      else if (game.state == StateGame.insufficientMaterial) {
+        titleAlert = "Insufficient material\n"
+            "Game drawn";
+      }
+    }
+
+    setState(() {
+      isGameSetup = false;
+      isGameOngoing = false;
+      squaresSelected = [];
+      squaresValid = [];
+      this.titleAlert = titleAlert;
+    });
   }
 
-  
+
+  saveGame({bool isResignLocal, bool isDraw}) async {
+    History.saveGame(game, connection.idEndpoint, isResignLocal: isResignLocal, isDraw: isDraw);
+  }
+
+
   abortGame() async {
-    saveGame();
-  }
-
-
-  saveGame() async {
-    // TODO: IMPLEMENT
+    History.saveGame(game, connection.idEndpoint, isAbort: true);
   }
 
   
@@ -1498,7 +1575,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   
   autoRotateIfNeeded() {
-    if (defaults.autoRotates && !isConnected) {
+    if (!isConnected && defaults.autoRotates) {
       isOrientationLight = !isOrientationLight;
     }
   }
@@ -1581,23 +1658,27 @@ class StateWidgetGame extends State<WidgetGame> {
 
   }
 
-  
-  String getAlertTitle() {
-    if (game.state == StateGame.checkmate) {
-      return "Checkmate!";
-    }
-    if (game.state == StateGame.stalemate) {
-      return "Stalemate";
-    }
-    if (timer.timeLight == 0) {
-      return "Time over";
-    }
-    if (timer.timeDark == 0) {
-      return "Time over";
-    }
-    return "Nothing to see here";
+
+  showSnackBar(Widget content) {
+    scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+            content: content
+        )
+    );
   }
-  
+
+
+  String getFormattedInterval(double interval) {
+    var intervalFloored = interval.ceil();
+    var minutes = intervalFloored ~/ 60;
+    var seconds = (intervalFloored % 60);
+    var minutesPadded = minutes < 10 ? "0$minutes" : minutes;
+    var secondsPadded = seconds < 10 ? "0$seconds" : seconds;
+    return "$minutesPadded:$secondsPadded";
+  }
+
+
+
   // PUSH
   // ...
   // ...
@@ -1623,23 +1704,5 @@ class StateWidgetGame extends State<WidgetGame> {
           }
       ),
     );
-  }
-
-  showSnackBar(Widget content) {
-    scaffoldKey.currentState.showSnackBar(
-        SnackBar(
-            content: content
-        )
-    );
-  }
-  
-  // should be moved in diff file
-  String getFormattedInterval(double interval) {
-    var intervalFloored = interval.ceil();
-    var minutes = intervalFloored ~/ 60;
-    var seconds = (intervalFloored % 60);
-    var minutesPadded = minutes < 10 ? "0$minutes" : minutes;
-    var secondsPadded = seconds < 10 ? "0$seconds" : seconds;
-    return "$minutesPadded:$secondsPadded";
   }
 }

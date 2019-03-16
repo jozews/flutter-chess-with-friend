@@ -114,19 +114,19 @@ class Timer {
     if (timestampStart != null) {
 
       var timeUpdated = timeOnStart - (timestampNow - timestampStart);
-      var timeUpdatedMaxed = max(0.0, timeUpdated);
+      var timeUpdatedFloored = timeUpdated.floor();
 
-      if (!stopped && timeUpdatedMaxed.ceil() != getTime(isLightTicking).ceil()) {
-        setTime(isLightTicking, timeUpdatedMaxed);
-        streamController.add(timeUpdatedMaxed);
-      }
-      if (stopped || timeUpdatedMaxed == 0.0) {
-        stop();
-        return;
+      if (!stopped && timeUpdatedFloored != getTime(isLightTicking).floor()) {
+        setTime(isLightTicking, timeUpdated);
+        streamController.add(timeUpdatedFloored);
       }
     }
 
     await Future.delayed(Duration(milliseconds: millisecondsTickPrecision));
+
+    if (stopped) {
+      return;
+    }
 
     tick();
   }
