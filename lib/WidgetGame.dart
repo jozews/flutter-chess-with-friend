@@ -78,9 +78,8 @@ class StateWidgetGame extends State<WidgetGame> {
 
   // ALERT
   // ...
-  String titleAlert = "Hello World!\n"
-      "Hello back";
-  
+  String titleAlert;
+
   // TYPE STATE
   // ...
   TypeStateWidgetGame typeState;
@@ -667,6 +666,9 @@ class StateWidgetGame extends State<WidgetGame> {
                     if (isGameEnded) {
                       newGame();
                     }
+                    setState(() {
+                      titleAlert = null;
+                    });
                   },
                 ),
               ],
