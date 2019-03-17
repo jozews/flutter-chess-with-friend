@@ -303,16 +303,20 @@ class Move {
 
 class Game {
 
+
   Map<Square, Piece> board;
   StateGame state;
   bool isLightToMove;
   List<Move> moves;
+  List<String> notations;
+
 
   Game.standard() {
     board = getPiecesStandard();
     state = StateGame.ongoing;
     isLightToMove = true;
     moves = [];
+    notations = [];
   }
 
 
@@ -747,11 +751,11 @@ class Game {
   }
 
 
-  String makeMove(Move move) {
+  bool makeMove(Move move) {
 
     // validate move
     if (!isMoveValid(move)) {
-      return null;
+      return false;
     }
 
     var pieceToMove = board[move.square1];
@@ -815,6 +819,8 @@ class Game {
       state = StateGame.insufficientMaterial;
     }
 
+    // notation
+    // ...
     var notationType = pieceToMove.notationType;
     var notationDisambiguation = "";
     if (pieceToMove.type == TypePiece.pawn && pieceTaken != null) {
@@ -829,9 +835,10 @@ class Game {
     var notationCapture = pieceTaken != null ? "x" : "";
     var notationSquare = move.square2.notation;
     var notationEnd = state == StateGame.checkmate ? "#" : checks.isNotEmpty ? "+" : "";
-    var movePNG = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
+    var notation = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
+    notations.add(notation);
 
-    return movePNG;
+    return true;
   }
 
 

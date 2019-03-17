@@ -40,6 +40,10 @@ class Const {
 
   static const MILLISECONDS_DELAY_SCROLL = 15;
 
+  static const STRING_LIGHT = "light";
+  static const STRING_DARK = "dark";
+  static const STRING_YOU = "you";
+
   static const ACCENTS = [
     Colors.redAccent,
     Colors.pinkAccent,

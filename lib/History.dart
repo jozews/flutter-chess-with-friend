@@ -3,31 +3,43 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import 'Game.dart';
-import 'Connection.dart';
-
 
 enum ResultGameHistory {
-  def
+  checkmate, stalemate, insufficientMaterial, timeOver, resignation, draw, abort
 }
+
+
+class MoveGameHistory {
+  String time;
+  String notation;
+}
+
 
 class GameHistory {
 
-  String notatedMoves;
+  String idDevice;
+  String nameLight;
+  String nameDark;
+  ResultGameHistory result;
+  bool isLightWinner;
+  List<MoveGameHistory> moves;
 
-  GameHistory.file(FileSystemEntity file) {
-    var string = (file as File).readAsStringSync();
+  GameHistory({this.idDevice, this.nameLight, this.nameDark, this.isLightWinner, this.result, this.moves});
+
+  GameHistory.file(File file) {
+    var string = file.readAsStringSync();
   }
 }
+
 
 class History {
 
   Directory directoryApp;
   bool isLocalWhite;
 
-  static saveGame(Game game, Connection connection, {bool isResignLocal, bool isDraw, bool isTimeLightOver, bool isAbort}) async {
+  static saveGame(GameHistory gameHistory) async {
     var directoryApp = await getApplicationDocumentsDirectory();
-    var pathGame = "$directoryApp/games/${connection.idDevice}";
+    var pathGame = "$directoryApp/games/${gameHistory.idDevice}";
     var fileGame = File(pathGame);
   }
 
