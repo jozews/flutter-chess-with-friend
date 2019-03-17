@@ -1617,7 +1617,7 @@ class StateWidgetGame extends State<WidgetGame> {
       }
     }
 
-    await saveGame(gameHistory);
+    saveGame(gameHistory);
 
     setState(() {
       typeState = TypeStateWidgetGame.ended;
@@ -1632,7 +1632,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   saveGame(GameHistory gameHistory) async {
-    History.saveGame(gameHistory);
+    await History.saveGame(gameHistory);
   }
 
   
