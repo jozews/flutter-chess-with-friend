@@ -4,13 +4,8 @@ import 'dart:math';
 
 
 class MoveTimer {
-
-  double timestampStarted;
-  double timestampEnded;
-
-  MoveTimer(this.timestampStarted, this.timestampEnded);
-
-  double get duration => timestampEnded - timestampStarted;
+  double time;
+  MoveTimer(this.time);
 }
 
 
@@ -156,7 +151,7 @@ class TimerGame {
     streamController.add(timeIncremented);
 
     // add move
-    var move = MoveTimer(timestampStart, timestampEnd);
+    var move = MoveTimer(timeIncremented);
     moves.add(move);
 
     // halt tick

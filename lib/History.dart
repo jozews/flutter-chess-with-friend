@@ -10,8 +10,9 @@ enum ResultGameHistory {
 
 
 class MoveGameHistory {
-  String time;
   String notation;
+  double time;
+  MoveGameHistory(this.notation, this.time);
 }
 
 
