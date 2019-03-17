@@ -304,6 +304,9 @@ class Move {
 class Game {
 
 
+  static const STRING_CASTLE_SHORT = "O-O";
+  static const STRING_CASTLE_LONG = "O-O-O";
+
   Map<Square, Piece> board;
   StateGame state;
   bool isLightToMove;
@@ -722,10 +725,12 @@ class Game {
 
 
   // * does not validates
-  bool isMoveCastling(Move move) {
+  bool isMoveCastling(Move move, {bool isShort}) {
     var piece = board[move.square1];
-    var isColumnDelta2 = (move.square1.column - move.square2.column).abs() == 2;
-    return piece.type == TypePiece.king && isColumnDelta2;
+    var deltaColumn = move.square2.column - move.square1.column;
+    var isDeltaAbsColumn2 = deltaColumn.abs() == 2;
+    var isDeltaColumnPositive = deltaColumn > 0;
+    return piece.type == TypePiece.king && isDeltaAbsColumn2 && isShort == isDeltaColumnPositive;
   }
 
 
@@ -733,8 +738,8 @@ class Game {
   bool isMoveEnPassant(Move move) {
     var piece = board[move.square1];
     var pieceCapture = board[move.square2];
-    var isColumnDelta1 = (move.square1.column - move.square2.column).abs() == 1;
-    return piece.type == TypePiece.pawn && pieceCapture == null && isColumnDelta1;
+    var isDeltaColumn1 = (move.square1.column - move.square2.column).abs() == 1;
+    return piece.type == TypePiece.pawn && pieceCapture == null && isDeltaColumn1;
   }
 
   bool isThereSufficientMaterialToCheckmate({bool isLight}) {
@@ -770,7 +775,9 @@ class Game {
     }
 
     // if castling move rook
-    if (isMoveCastling(move)) {
+    var isCastleShort = isMoveCastling(move, isShort: true);
+    var isCastleLong = isMoveCastling(move, isShort: false);
+    if (isCastleShort || isCastleLong) {
       var columnInitialRook = move.square2.column - move.square1.column > 0 ? 8 : 1;
       var squareInitialRook = Square(columnInitialRook, move.square1.row);
       var columnFinalRook = (move.square1.column + move.square2.column) ~/ 2;
@@ -784,13 +791,12 @@ class Game {
       board.remove(squareOfCapture);
     }
 
-    // * update board after checking isMoveCastling isMoveEnPassant as they read the board
+    // NOTE update board after checking isMoveCastling isMoveEnPassant as they read the board
     board.remove(move.square1);
     var pieceTaken = board[move.square2];
     board[move.square2] = pieceToMove;
     moves.add(move);
 
-    // toggle isLightToMove
     isLightToMove = !isLightToMove;
     
     var squareKing = getEntriesFiltered(type: TypePiece.king, isLight: isLightToMove).first.key;
@@ -821,21 +827,27 @@ class Game {
 
     // notation
     // ...
-    var notationType = pieceToMove.notationType;
-    var notationDisambiguation = "";
-    if (pieceToMove.type == TypePiece.pawn && pieceTaken != null) {
-      notationDisambiguation = move.square1.notationColumn;
+    String notation;
+    if (!isCastleShort && !isCastleLong) {
+      var notationType = pieceToMove.notationType;
+      var notationDisambiguation = "";
+      if (pieceToMove.type == TypePiece.pawn && pieceTaken != null) {
+        notationDisambiguation = move.square1.notationColumn;
+      }
+      if (entriesOtherWithValidSquare2.isNotEmpty) {
+        var setSquare1 = move.square1.notation.split("").toSet();
+        var setSquare1Other = entriesOtherWithValidSquare2.first.key.notation.split("").toSet();
+        var intersection = setSquare1Other.intersection(setSquare1);
+        notationDisambiguation = setSquare1.difference(intersection).first;
+      }
+      var notationCapture = pieceTaken != null ? "x" : "";
+      var notationSquare = move.square2.notation;
+      var notationEnd = state == StateGame.checkmate ? "#" : checks.isNotEmpty ? "+" : "";
+      notation = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
     }
-    if (entriesOtherWithValidSquare2.isNotEmpty) {
-      var setSquare1 = move.square1.notation.split("").toSet();
-      var setSquare1Other = entriesOtherWithValidSquare2.first.key.notation.split("").toSet();
-      var intersection = setSquare1Other.intersection(setSquare1);
-      notationDisambiguation = setSquare1.difference(intersection).first;
+    else {
+      notation = isCastleShort ? STRING_CASTLE_SHORT : STRING_CASTLE_LONG;
     }
-    var notationCapture = pieceTaken != null ? "x" : "";
-    var notationSquare = move.square2.notation;
-    var notationEnd = state == StateGame.checkmate ? "#" : checks.isNotEmpty ? "+" : "";
-    var notation = "$notationType$notationDisambiguation$notationCapture$notationSquare$notationEnd";
     notations.add(notation);
 
     return true;
@@ -851,8 +863,8 @@ class Game {
     Square squareInitial;
     Square squareFinal;
 
-    var isShortCastle = notation == "O-O";
-    var isLongCastle = notation == "O-O-O";
+    var isShortCastle = notation == STRING_CASTLE_SHORT;
+    var isLongCastle = notation == STRING_CASTLE_LONG;
 
     // if not castle
     // ...
@@ -860,7 +872,7 @@ class Game {
     if (!isShortCastle && !isLongCastle) {
 
       var charsPNG = notation.split("");
-      
+
       // get type piece
       // ...
       var typePiece = notation.contains("K") ? TypePiece.king 

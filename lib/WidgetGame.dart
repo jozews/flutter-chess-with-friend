@@ -72,7 +72,6 @@ class StateWidgetGame extends State<WidgetGame> {
 
   // NOTATIONS
   // ...
-  List<String> notations;
   int indexFirstNotationLeft;
   int indexFirstNotationRight;
   int countColumnChildrenMax;
@@ -123,7 +122,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
   double get heightSquare => heightScreen / 8;
-  double get heightNotation => Const.SIZE_NOTATION + Const.INSET_NOTATION*2;
+  double get heightNotation => Const.SIZE_NOTATION + insetNotationInner*2;
   double get heightItemMenu => heightSquare;
   double get heightWidgetTimeItem => heightSquare*2/3;
 
@@ -154,11 +153,13 @@ class StateWidgetGame extends State<WidgetGame> {
   Color get colorTagSquare => accentBoard.shade700;
 
   double get insetIconMenu => (heightSquare - Const.SIZE_ICON_MENU)/2;
-  double get insetTimeEdge => (heightSquare - Const.SIZE_TIME)/2;
-  double get insetTimeNonEdge => heightSquare;
-  double get insetNameConnectionEdge => (heightSquare - Const.SIZE_NAME_CONNECTION)/2;
+  double get insetTime => isConnected ? heightSquare : (heightSquare - Const.SIZE_TIME)/2;
+  double get insetNameConnection => (heightSquare - Const.SIZE_NAME_CONNECTION)/2;
   double get insetTitleAlert => heightSquare*1/3;
   double get insetActionAlert => heightSquare*1/3;
+  double get insetNotationsStart => (isConnected ? heightSquare*3/2 : heightSquare) + (heightSquare - heightNotation)/2;
+  double get insetNotationsEnd => 0.0;
+  double get insetNotationInner => heightSquare - Const.SIZE_NOTATION*2;
 
 
   // STATE
@@ -298,8 +299,8 @@ class StateWidgetGame extends State<WidgetGame> {
                         ),
                       ),
                       margin: EdgeInsets.only(
-                        bottom: atLeft ? insetNameConnectionEdge : 0.0,
-                        top: !atLeft ? insetNameConnectionEdge : 0.0,
+                        bottom: atLeft ? insetNameConnection : 0.0,
+                        top: !atLeft ? insetNameConnection : 0.0,
                       ),
                     ) : Container(),
                     timer != null ? Container(
@@ -316,15 +317,15 @@ class StateWidgetGame extends State<WidgetGame> {
                         ),
                       ),
                       margin: EdgeInsets.only(
-                        bottom: atLeft ? isConnected ? heightSquare : insetTimeEdge : 0.0,
-                        top: !atLeft ? isConnected ? heightSquare : insetTimeEdge : 0.0,
+                        bottom: atLeft ? isConnected ? heightSquare : insetTime : 0.0,
+                        top: !atLeft ? isConnected ? heightSquare : insetTime : 0.0,
                       ),
                     ) : Container(),
                   ],
                   verticalDirection: atLeft ? VerticalDirection.up : VerticalDirection.down,
                 )
             ),
-            notations != null ? Align(
+            game?.notations != null ? Align(
               alignment: atLeft ? Alignment.bottomCenter : Alignment.topCenter,
               child: Container(
                 child: GestureDetector(
@@ -332,12 +333,15 @@ class StateWidgetGame extends State<WidgetGame> {
                         builder: (context, constraints) {
                           // set count notations
                           if (countColumnChildrenMax == null) {
-                            countColumnChildrenMax = (constraints.maxHeight / heightNotation).floor() - 2;
+                            countColumnChildrenMax = ((constraints.maxHeight - insetNotationsStart) / heightNotation).floor();
                           }
                           var countNotations = getCountNotationsAll(atLeft: atLeft);
                           var countNotationsMin = min(countColumnChildrenMax, countNotations);
                           return Column(
-                            children: List.generate(countNotationsMin, (index) => widgetNotation(index, atLeft)),
+                            children: List.generate(countNotationsMin, (index) => widgetNotation(
+                                index,
+                                atLeft
+                            )),
                             verticalDirection: atLeft ? VerticalDirection.up : VerticalDirection.down,
                           );
                         }),
@@ -351,8 +355,8 @@ class StateWidgetGame extends State<WidgetGame> {
                     },
                 ),
                 margin: EdgeInsets.only(
-                  top: !atLeft ? Const.INSET_NOTATION_START : Const.INSET_NOTATIONS_END,
-                  bottom: atLeft ? Const.INSET_NOTATION_START : Const.INSET_NOTATIONS_END,
+                  top: !atLeft ? insetNotationsStart : insetNotationsEnd,
+                  bottom: atLeft ? insetNotationsStart : insetNotationsEnd,
                 ),
               ),
             ) : Container()
@@ -478,7 +482,7 @@ class StateWidgetGame extends State<WidgetGame> {
   Widget widgetNotation(int index, bool atLeft) {
     var indexNotation = getIndexNotationFromIndexChildren(index, atLeft: atLeft);
     var indexPosition = getIndexPositionFromIndexChildren(index, atLeft: atLeft);
-    var notation = notations[indexNotation];
+    var notation = game.notations[indexNotation];
     var isSelected = indexPosition == this.indexPosition;
     return GestureDetector(
       child: Center(
@@ -500,7 +504,7 @@ class StateWidgetGame extends State<WidgetGame> {
             color: isSelected ? Const.COLOR_SELECTED : Colors.transparent,
           ),
           padding: EdgeInsets.all(
-              Const.INSET_NOTATION
+              insetNotationInner
           ),
         ),
       ),
@@ -1339,7 +1343,6 @@ class StateWidgetGame extends State<WidgetGame> {
       indexFirstNotationRight = 0;
       typeState = TypeStateWidgetGame.setup;
       this.offsets = offsets;
-      notations = [];
       timer.timeTotal = timer.timeTotal;
       timer.timeTotal = timer.timeTotal;
     });
@@ -1716,7 +1719,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
-    var yPositionNormal = atLeft ? -1*(yPosition + Const.INSET_NOTATION_START - heightScreen) : yPosition - Const.INSET_NOTATION_START;
+    var yPositionNormal = atLeft ? -1*(yPosition + insetNotationsStart - heightScreen) : yPosition - insetNotationsStart;
     var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
@@ -1748,7 +1751,7 @@ class StateWidgetGame extends State<WidgetGame> {
   
 
   int getCountNotationsAll({bool atLeft}) {
-    var doubleCountNotation = (notations ?? []).length / 2;
+    var doubleCountNotation = (game?.notations?.length ?? 0)/2;
     int countNotations;
     if ((atLeft && isOrientationLight) || (!atLeft && !isOrientationLight)) {
       countNotations = doubleCountNotation.ceil();
