@@ -20,7 +20,7 @@ import 'WidgetDefaults.dart';
 
 
 enum TypeStateWidgetGame {
-  setup, ongoing, ended
+  setup, ongoing, ended, readonly
 }
 
 class WidgetGame extends StatefulWidget {
@@ -37,10 +37,11 @@ class StateWidgetGame extends State<WidgetGame> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // MODEL
+  // GAME
   // ...
   Game game;
   TimerGame timer;
+  GameHistory gameHistory;
 
   // BOARD
   // ...
@@ -103,6 +104,7 @@ class StateWidgetGame extends State<WidgetGame> {
   MaterialAccentColor get accentBoard => defaults.indexAccent != null ?Const.ACCENTS[defaults.indexAccent] : null;
 
   bool get isConnected => connection != null;
+  bool get isGameSetup => typeState == TypeStateWidgetGame.setup;
   bool get isGameOngoing => typeState == TypeStateWidgetGame.ongoing;
   bool get isGameEnded => typeState == TypeStateWidgetGame.ended;
   bool get isLeftToMove => isOrientationLight && game.isLightToMove;
@@ -112,6 +114,7 @@ class StateWidgetGame extends State<WidgetGame> {
   String get keyScoreLocal => "${Defaults.SCORE_LOCAL}${connection.idDevice}";
   String get keyScoreRemote => "${Defaults.SCORE_REMOTE}${connection.idDevice}";
 
+  bool get canMove => isGameOngoing || isGameSetup;
   bool get canPayloadGameSetControl => !isGameOngoing;
   bool get canPayloadGameNewGame => !isGameOngoing;
   bool get canPayloadGameResign => isGameOngoing;
@@ -135,7 +138,7 @@ class StateWidgetGame extends State<WidgetGame> {
   double get sizePiece => heightSquare * 9/10;
   double get sizeDotSquareValid => heightSquare / 4;
 
-  bool get shouldMenuShowItemNew => !isConnected && typeState == TypeStateWidgetGame.ended;
+  bool get shouldMenuShowItemNew => !isConnected && (typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly);
   bool get shouldMenuShowItemEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
   bool get shouldMenuShowItemResign => isConnected && isGameOngoing;
   bool get shouldMenuShowItemDraw => isConnected && isGameOngoing;
@@ -347,11 +350,11 @@ class StateWidgetGame extends State<WidgetGame> {
                         }),
                     onPanStart: (pan) {
                       var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
-                      panOnIndexChildren(indexChildren: indexChildren, atLeft: atLeft);
+                      onPanStartSide(indexChildren: indexChildren, atLeft: atLeft);
                     },
                     onPanUpdate: (pan) {
                       var indexChildren = getIndexChildrenFromYPosition(pan.globalPosition.dy, atLeft: atLeft);
-                      panOnIndexChildren(indexChildren: indexChildren, atLeft: atLeft);
+                      onPanUpdateSide(indexChildren: indexChildren, atLeft: atLeft);
                     },
                 ),
                 margin: EdgeInsets.only(
@@ -484,28 +487,26 @@ class StateWidgetGame extends State<WidgetGame> {
     var indexPosition = getIndexPositionFromIndexChildren(index, atLeft: atLeft);
     var notation = game.notations[indexNotation];
     var isSelected = indexPosition == this.indexPosition;
-    return GestureDetector(
-      child: Center(
-        child: Container(
-          child: Text(
-            notation,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: Const.SIZE_NOTATION,
-              fontWeight: FontWeight.normal,
-            ),
+    return Center(
+      child: Container(
+        child: Text(
+          notation,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: Const.SIZE_NOTATION,
+            fontWeight: FontWeight.normal,
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(
-                Radius.circular(
-                    Const.RADIUS_SOFT
-                )
-            ),
-            color: isSelected ? Const.COLOR_SELECTED : Colors.transparent,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(
+              Radius.circular(
+                  Const.RADIUS_SOFT
+              )
           ),
-          padding: EdgeInsets.all(
-              insetNotationInner
-          ),
+          color: isSelected ? Const.COLOR_SELECTED : Colors.transparent,
+        ),
+        padding: EdgeInsets.all(
+            insetNotationInner
         ),
       ),
     );
@@ -875,7 +876,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   onTapDownBoard(TapDownDetails tap) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || isGameEnded) {
+    if (!isLastPosition || !canMove) {
       return;
     }
     var offset = offsetFromGlobalPosition(tap.globalPosition);
@@ -914,7 +915,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapUpBoard(TapUpDetails tap) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || isGameEnded) {
+    if (!isLastPosition || !canMove) {
       return;
     }
     if (squaresSelected.length == 2) {
@@ -932,7 +933,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanStartBoard(DragStartDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || isGameEnded) {
+    if (!isLastPosition || !canMove) {
       return;
     }
     var offset = offsetFromGlobalPosition(pan.globalPosition);
@@ -958,7 +959,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanUpdateBoard(DragUpdateDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || isGameEnded) {
+    if (!isLastPosition || !canMove) {
       return;
     }
     var offset = offsetFromGlobalPosition(pan.globalPosition);
@@ -995,7 +996,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onPanEndBoard(DragEndDetails pan) {
     var isLastPosition = indexPosition == positions.length - 1;
-    if (!isLastPosition || isGameEnded) {
+    if (!isLastPosition || !canMove) {
       return;
     }
     if (squaresSelected.isNotEmpty && piecePanning != null) {
@@ -1021,6 +1022,36 @@ class StateWidgetGame extends State<WidgetGame> {
           squaresValid = [];
         });
       }
+    }
+  }
+
+
+  onPanStartSide({int indexChildren, bool atLeft}) {
+    onPanSide(indexChildren: indexChildren, atLeft: atLeft);
+  }
+
+
+  onPanUpdateSide({int indexChildren, bool atLeft}) {
+    onPanSide(indexChildren: indexChildren, atLeft: atLeft);
+  }
+
+
+  onPanSide({int indexChildren, bool atLeft}) {
+    var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
+    if (gameHistory != null) {
+      var indexNotation = getIndexNotationFromIndexChildren(indexChildren, atLeft: atLeft);
+      var indexLight = min(game.notations.length - 1, indexNotation - (isLeftWhite == atLeft ? 0 : 1));
+      var indexDark = min(game.notations.length - 1, max(0, indexNotation - (!isLeftWhite == atLeft ? 0 : 1)));
+      var moveLastLight = gameHistory.moves[indexLight];
+      var moveLastDark = gameHistory.moves[indexDark];
+      setState(() {
+        timer.timeLight = moveLastLight.time;
+        timer.timeDark = moveLastDark.time;
+      });
+    }
+    if (indexPosition != this.indexPosition) {
+      setOffsetsOfPosition(index: indexPosition);
+      scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
     }
   }
 
@@ -1056,7 +1087,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   onTapItemMenuEnd() {
-    endGame();
+    endGame(isAbort: true);
     setState(() {
       isMenuShowing = false;
     });
@@ -1318,8 +1349,11 @@ class StateWidgetGame extends State<WidgetGame> {
     setState(() { });
     await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
     newGame();
+    var games = await History.getGames();
+    print(games.length);
+    createGameFromHistory(games[1]);
   }
-  
+
   
   newGame({PayloadGame payload}) async {
 
@@ -1342,15 +1376,43 @@ class StateWidgetGame extends State<WidgetGame> {
       indexFirstNotationLeft = 0;
       indexFirstNotationRight = 0;
       typeState = TypeStateWidgetGame.setup;
-      this.offsets = offsets;
       timer.timeTotal = timer.timeTotal;
       timer.timeTotal = timer.timeTotal;
     });
   }
 
 
-  startGame({PayloadGame payload}) {
+  createGameFromHistory(GameHistory gameHistory) {
 
+    game = Game.standard();
+    positions = [];
+    gameHistory.moves.forEach((moveGameHistory) {
+      var position = Map<Square, Piece>.from(game.board);
+      positions.add(position);
+      var move = game.getMoveFromNotation(moveGameHistory.notation);
+      game.makeMove(move);
+    });
+
+    // add last position
+    var position = Map<Square, Piece>.from(game.board);
+    positions.add(position);
+
+    setOffsetsOfPosition(index: 0);
+
+    setState(() {
+      this.gameHistory = gameHistory;
+      squaresSelected = [];
+      squaresValid = [];
+      indexFirstNotationLeft = 0;
+      indexFirstNotationRight = 0;
+      typeState = TypeStateWidgetGame.readonly;
+      timer.timeLight = gameHistory.moves.first.time;
+      timer.timeDark = gameHistory.moves.first.time;
+    });
+  }
+
+
+  startGame({PayloadGame payload}) {
 
     setState(() {
       typeState = TypeStateWidgetGame.ongoing;
@@ -1508,10 +1570,10 @@ class StateWidgetGame extends State<WidgetGame> {
 
     var nameLight = isConnected ? connection.isLocalLight ? Const.STRING_YOU
         : connection.nameEndpoint
-        : Const.STRING_LIGHT;
+        : null;
     var nameDark = isConnected ? !connection.isLocalLight ? Const.STRING_YOU
         : connection.nameEndpoint
-        : Const.STRING_DARK;
+        : null;
 
     var gameHistory = GameHistory(idDevice: isConnected ? connection.idDevice : null, nameLight: nameLight, nameDark: nameDark, moves: []);
     game.notations.asMap().forEach((index, notation) {
@@ -1581,6 +1643,9 @@ class StateWidgetGame extends State<WidgetGame> {
         titleAlert = "draw by agreement";
         gameHistory.result = ResultGameHistory.draw;
       }
+      else {
+        gameHistory.result = ResultGameHistory.abort;
+      }
       setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
     }
     else {
@@ -1614,6 +1679,9 @@ class StateWidgetGame extends State<WidgetGame> {
         titleAlert = "Insufficient material\n"
             "game drawn";
         gameHistory.result = ResultGameHistory.insufficientMaterial;
+      }
+      else {
+        gameHistory.result = ResultGameHistory.abort;
       }
     }
 
@@ -1764,15 +1832,6 @@ class StateWidgetGame extends State<WidgetGame> {
       countNotations = doubleCountNotation.floor();
     }
     return countNotations;
-  }
-
-  
-  panOnIndexChildren({int indexChildren, bool atLeft}) {
-    var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
-    if (indexPosition != this.indexPosition) {
-      setOffsetsOfPosition(index: indexPosition);
-      scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
-    }
   }
   
   
