@@ -140,8 +140,6 @@ class TimerGame {
 
   addTimestampEnd({double timestamp}) {
 
-    var timestampEnd = timestamp ?? timestampNow;
-
     // update
     var timeUpdated = timeOnStart - (timestampNow - timestampStart);
     var timeUpdatedMaxed = max(0.0, timeUpdated);

@@ -41,7 +41,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   Game game;
   TimerGame timer;
-  GameHistory gameHistory;
+//  GameHistory gameHistory;
 
   // BOARD
   // ...
@@ -142,8 +142,9 @@ class StateWidgetGame extends State<WidgetGame> {
   bool get shouldMenuShowItemEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
   bool get shouldMenuShowItemResign => isConnected && isGameOngoing;
   bool get shouldMenuShowItemDraw => isConnected && isGameOngoing;
-  bool get shouldMenuShowItemTime => !isGameOngoing;
-  bool get shouldMenuShowItemHistory => false; // !isConnected && !isGameOngoing;
+  bool get shouldMenuShowItemTime => isGameSetup;
+  bool get shouldMenuShowItemHistory => !isConnected;
+  bool get shouldMenuShowItemAnimate => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
   bool get shouldShowDim => isAlertShowing || isMenuShowing || areControlsShowing;
   bool get shouldAlertShowNew => true;
 
@@ -550,22 +551,6 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuDraw();
               },
             ) : Container(),
-            shouldMenuShowItemTime ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "time"
-              ),
-              onTap: () {
-                onTapItemMenuTime();
-                },
-            ) : Container(),
-            shouldMenuShowItemHistory ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "history"
-              ),
-              onTap: () {
-                onTapItemMenuHistory();
-              },
-            ) : Container(),
             GestureDetector(
               child: widgetItemMenu(
                   title: "flip"
@@ -574,6 +559,22 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuOrientation();
               },
             ),
+            shouldMenuShowItemHistory ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "animate"
+              ),
+              onTap: () {
+                onTapItemMenuAnimate();
+              },
+            ) : Container(),
+            shouldMenuShowItemTime ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "time"
+              ),
+              onTap: () {
+                onTapItemMenuTime();
+              },
+            ) : Container(),
             GestureDetector(
               child: widgetItemMenu(
                   title: "board"
@@ -582,6 +583,14 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuBoard();
               },
             ),
+            shouldMenuShowItemHistory ? GestureDetector(
+              child: widgetItemMenu(
+                  title: "history"
+              ),
+              onTap: () {
+                onTapItemMenuHistory();
+              },
+            ) : Container(),
           ],
         ),
         color: colorBackground1,
@@ -1027,32 +1036,14 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   onPanStartSide({int indexChildren, bool atLeft}) {
-    onPanSide(indexChildren: indexChildren, atLeft: atLeft);
+    var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
+    selectPosition(index: indexPosition);
   }
 
 
   onPanUpdateSide({int indexChildren, bool atLeft}) {
-    onPanSide(indexChildren: indexChildren, atLeft: atLeft);
-  }
-
-
-  onPanSide({int indexChildren, bool atLeft}) {
     var indexPosition = getIndexPositionFromIndexChildren(indexChildren, atLeft: atLeft);
-    if (gameHistory != null) {
-      var indexNotation = getIndexNotationFromIndexChildren(indexChildren, atLeft: atLeft);
-      var indexLight = min(game.notations.length - 1, indexNotation - (isLeftWhite == atLeft ? 0 : 1));
-      var indexDark = min(game.notations.length - 1, max(0, indexNotation - (!isLeftWhite == atLeft ? 0 : 1)));
-      var moveLastLight = gameHistory.moves[indexLight];
-      var moveLastDark = gameHistory.moves[indexDark];
-      setState(() {
-        timer.timeLight = moveLastLight.time;
-        timer.timeDark = moveLastDark.time;
-      });
-    }
-    if (indexPosition != this.indexPosition) {
-      setOffsetsOfPosition(index: indexPosition);
-      scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
-    }
+    selectPosition(index: indexPosition);
   }
 
 
@@ -1109,6 +1100,23 @@ class StateWidgetGame extends State<WidgetGame> {
     drawGame();
   }
 
+  
+  onTapItemMenuAnimate() {
+    animateGame(millisecondsDelay: 1000);
+    setState(() {
+      isMenuShowing = false;
+    });
+  }
+
+
+  onTapItemMenuOrientation() {
+    isOrientationLight = !isOrientationLight;
+    setOffsetsOfPosition();
+    setState(() {
+      isMenuShowing = false;
+    });
+  }
+  
 
   onTapItemMenuTime() {
     setState(() {
@@ -1120,15 +1128,6 @@ class StateWidgetGame extends State<WidgetGame> {
 
   onTapItemMenuHistory() {
     pushHistory();
-    setState(() {
-      isMenuShowing = false;
-    });
-  }
-
-
-  onTapItemMenuOrientation() {
-    isOrientationLight = !isOrientationLight;
-    setOffsetsOfPosition();
     setState(() {
       isMenuShowing = false;
     });
@@ -1350,7 +1349,6 @@ class StateWidgetGame extends State<WidgetGame> {
     await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
     newGame();
     var games = await History.getGames();
-    print(games.length);
     createGameFromHistory(games[1]);
   }
 
@@ -1385,7 +1383,9 @@ class StateWidgetGame extends State<WidgetGame> {
   createGameFromHistory(GameHistory gameHistory) {
 
     game = Game.standard();
+    timer = TimerGame(timeTotal: gameHistory.moves.first.time);
     positions = [];
+
     gameHistory.moves.forEach((moveGameHistory) {
       var position = Map<Square, Piece>.from(game.board);
       positions.add(position);
@@ -1399,15 +1399,14 @@ class StateWidgetGame extends State<WidgetGame> {
 
     setOffsetsOfPosition(index: 0);
 
+    timer.moves = gameHistory.moves.map<MoveTimer>((move) => MoveTimer(move.time)).toList();
+
     setState(() {
-      this.gameHistory = gameHistory;
       squaresSelected = [];
       squaresValid = [];
       indexFirstNotationLeft = 0;
       indexFirstNotationRight = 0;
       typeState = TypeStateWidgetGame.readonly;
-      timer.timeLight = gameHistory.moves.first.time;
-      timer.timeDark = gameHistory.moves.first.time;
     });
   }
 
@@ -1704,15 +1703,13 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   
-  automateGame({int millisecondsDelay = 0}) async {
-
-    await Future.delayed(Duration(seconds: 1));
-
-    var notations = "Nf3;Nf6;c4;g6;Nc3;Bg7;d4;O-O;Bf4;d5;Qb3;dxc4;Qxc4;c6;e4;Nbd7;Rd1;Nb6;Qc5;Bg4;Bg5;Na4;Qa3;Nxc3;bxc3;Nxe4;Bxe7;Qb6;Bc4;Nxc3;Bc5;Rfe8+;Kf1;Be6;Bxb6;Bxc4+;Kg1;Ne2+;Kf1;Nxd4+;Kg1;Ne2+;Kf1;Nc3+;Kg1;axb6;Qb4;Ra4;Qxb6;Nxd1;h3;Rxa2;Kh2;Nxf2;Re1;Rxe1;Qd8+;Bf8;Nxe1;Bd5;Nf3;Ne4;Qb8;b5;h4;h5;Ne5;Kg7;Kg1;Bc5+;Kf1;Ng3+;Ke1;Bb4+;Kd1;Bb3+;Kc1;Ne2+;Kb1;Nc3+;Kc1;Rc2#";
-
-    for (String notation in notations.split(";")) {
-      var move = game.getMoveFromNotation(notation);
-      moveGame(move);
+  animateGame({int millisecondsDelay = 0}) async {
+    if (indexPosition != 0) {
+      selectPosition(index: 0);
+      await Future.delayed(Duration(milliseconds: millisecondsDelay));
+    }
+    for (int indexPosition in List.generate(positions.length - 1, (length) => 1 + length)) {
+      selectPosition(index: indexPosition);
       await Future.delayed(Duration(milliseconds: millisecondsDelay));
     }
   }
@@ -1723,6 +1720,27 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   // ...
   // ...
+  selectPosition({int index}) {
+    var atLeft = getAtLeftFromIndexPosition(index);
+    var indexChildren = getIndexChildrenFromIndexPosition(index, atLeft: atLeft);
+    if (index > 0 && (typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly)) {
+      var indexNotation = getIndexNotationFromIndexChildren(indexChildren, atLeft: atLeft);
+      var indexLight = indexNotation - (isLeftWhite == atLeft ? 0 : 1);
+      var indexDark = max(0, indexNotation - (!isLeftWhite == atLeft ? 0 : 1));
+      var moveLastLight = timer.moves[indexLight];
+      var moveLastDark = timer.moves[indexDark];
+      setState(() {
+        timer.timeLight = moveLastLight.time;
+        timer.timeDark = moveLastDark.time;
+      });
+    }
+    if (index != this.indexPosition) {
+      setOffsetsOfPosition(index: index);
+      scrollNotationsIfNeeded(indexChildren: indexChildren, atLeft: atLeft);
+    }
+  }
+  
+  
   Offset offsetFromGlobalPosition(Offset position) {
     return Offset(position.dx - (widthDark/2), position.dy);
   }
@@ -1797,13 +1815,27 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   
-  int getIndexNotationFromIndexChildren(int indexChildren, {bool atLeft}) {
-    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 0 : 1) : (isOrientationLight ? 1 : 0));
+  int getIndexNotationFromIndexChildren(int index, {bool atLeft}) {
+    var indexPosition = (getIndexFirstNotation(atLeft: atLeft) + index)*2 + (atLeft ? (isOrientationLight ? 0 : 1) : (isOrientationLight ? 1 : 0));
+    var indexPositionMaxed = min(game.notations.length - 1, indexPosition);
+    return indexPositionMaxed;
   }
   
 
-  int getIndexPositionFromIndexChildren(int indexChildren, {bool atLeft}) {
-    return (getIndexFirstNotation(atLeft: atLeft) + indexChildren)*2 + (atLeft ? (isOrientationLight ? 1 : 2) : (isOrientationLight ? 2 : 1));
+  int getIndexPositionFromIndexChildren(int index, {bool atLeft}) {
+    var indexPosition = (getIndexFirstNotation(atLeft: atLeft) + index)*2 + (atLeft == isOrientationLight ? 1 : 2);
+    var indexPositionMaxed = min(positions.length - 1, indexPosition);
+    return indexPositionMaxed;
+  }
+
+  
+  bool getAtLeftFromIndexPosition(int indexPosition) {
+    return (indexPosition % 2 == 1) == isOrientationLight;
+  }
+
+
+  int getIndexChildrenFromIndexPosition(int indexPosition, {bool atLeft}) {
+    return (indexPosition - (atLeft == isOrientationLight ? 1 : 2)) ~/ 2 - getIndexFirstNotation(atLeft: atLeft);
   }
 
   
