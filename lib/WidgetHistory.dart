@@ -45,6 +45,7 @@ class StateWidgetHistory extends State<WidgetHistory> {
 
   setupGames() async {
     var games = await History.getGames();
+    games.sort((game1, game2) => game2.timestamp.compareTo(game1.timestamp));
     setState(() {
       this.games = games;
     });
@@ -60,8 +61,18 @@ class StateWidgetHistory extends State<WidgetHistory> {
           bottom: true,
           child: Stack(
             children: <Widget>[
-              games != null ? ListView(
+              games != null && games.isNotEmpty ? ListView(
                 children: games.map<Widget>((game) => widgetGame(game)).toList(),
+              ) : games != null && games.isEmpty ? Center(
+                child: Text(
+                  "No games yet",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: Const.SIZE_TITLE,
+                      fontWeight: FontWeight.w400
+                  ),
+
+                ),
               ) : Container(),
               widgetIconClose(),
             ],

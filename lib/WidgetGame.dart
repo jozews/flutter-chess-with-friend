@@ -139,15 +139,15 @@ class StateWidgetGame extends State<WidgetGame> {
   double get sizePiece => heightSquare * 9/10;
   double get sizeDotSquareValid => heightSquare / 4;
 
-  bool get shouldMenuShowItemNew => !isConnected && (typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly);
-  bool get shouldMenuShowItemEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
-  bool get shouldMenuShowItemResign => isConnected && isGameOngoing;
-  bool get shouldMenuShowItemDraw => isConnected && isGameOngoing;
-  bool get shouldMenuShowItemTime => isGameSetup;
-  bool get shouldMenuShowItemHistory => !isConnected;
-  bool get shouldMenuShowItemAnimate => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
-  bool get shouldShowDim => isAlertShowing || isMenuShowing || areControlsShowing;
-  bool get shouldAlertShowNew => true;
+  bool get showsItemMenuNew => !isConnected && (typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly);
+  bool get showsItemMenuEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
+  bool get showsItemMenuResign => isConnected && isGameOngoing;
+  bool get showsItemMenuDraw => isConnected && isGameOngoing;
+  bool get showsItemMenuTime => isGameSetup;
+  bool get showsItemMenuHistory => !isConnected;
+  bool get showsItemMenuAnimate => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
+  bool get showsDim => isAlertShowing || isMenuShowing || areControlsShowing;
+  bool get showNewInAlert => true;
 
   Color get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
   Color get colorBackground2 => Colors.white;
@@ -197,7 +197,7 @@ class StateWidgetGame extends State<WidgetGame> {
                   ],
                   mainAxisAlignment: MainAxisAlignment.center,
                 ),
-                shouldShowDim ? widgetDim() : Container(),
+                showsDim ? widgetDim() : Container(),
                 isMenuShowing ? widgetMenu() : Container(),
                 isAlertShowing ? widgetAlert() : Container(),
                 areControlsShowing ? widgetTime() : Container(),
@@ -520,7 +520,7 @@ class StateWidgetGame extends State<WidgetGame> {
       child: Container(
         child: ListView(
           children: <Widget>[
-            shouldMenuShowItemNew ? GestureDetector(
+            showsItemMenuNew ? GestureDetector(
               child: widgetItemMenu(
                   title: "new"
               ),
@@ -528,7 +528,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuNew();
               },
             ) : Container(),
-            shouldMenuShowItemEnd ? GestureDetector(
+            showsItemMenuEnd ? GestureDetector(
               child: widgetItemMenu(
                   title: "end"
               ),
@@ -536,7 +536,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuEnd();
               },
             ) : Container(),
-            shouldMenuShowItemResign ? GestureDetector(
+            showsItemMenuResign ? GestureDetector(
               child: widgetItemMenu(
                   title: "resign"
               ),
@@ -544,7 +544,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuResign();
               },
             ) : Container(),
-            shouldMenuShowItemDraw ? GestureDetector(
+            showsItemMenuDraw ? GestureDetector(
               child: widgetItemMenu(
                   title: "draw"
               ),
@@ -560,7 +560,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuOrientation();
               },
             ),
-            shouldMenuShowItemHistory ? GestureDetector(
+            showsItemMenuAnimate ? GestureDetector(
               child: widgetItemMenu(
                   title: "animate"
               ),
@@ -568,7 +568,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuAnimate();
               },
             ) : Container(),
-            shouldMenuShowItemTime ? GestureDetector(
+            showsItemMenuTime ? GestureDetector(
               child: widgetItemMenu(
                   title: "time"
               ),
@@ -584,7 +584,7 @@ class StateWidgetGame extends State<WidgetGame> {
                 onTapItemMenuBoard();
               },
             ),
-            shouldMenuShowItemHistory ? GestureDetector(
+            showsItemMenuHistory ? GestureDetector(
               child: widgetItemMenu(
                   title: "history"
               ),
@@ -659,7 +659,7 @@ class StateWidgetGame extends State<WidgetGame> {
                     insetTitleAlert,
                   ),
                 ),
-                shouldAlertShowNew ? Flexible(
+                showNewInAlert ? Flexible(
                   child: Container(
                     color: Colors.white,
                     height: Const.SIZE_DIVISOR,
@@ -1369,11 +1369,11 @@ class StateWidgetGame extends State<WidgetGame> {
     setOffsetsOfPosition();
 
     setState(() {
+      typeState = TypeStateWidgetGame.setup;
       squaresSelected = [];
       squaresValid = [];
       indexFirstNotationLeft = 0;
       indexFirstNotationRight = 0;
-      typeState = TypeStateWidgetGame.setup;
       timer.timeTotal = timer.timeTotal;
       timer.timeTotal = timer.timeTotal;
     });

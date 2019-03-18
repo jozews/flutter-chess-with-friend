@@ -90,7 +90,7 @@ class History {
 
   static Future<Directory> getDirectoryGames({bool createIfNonExistent = true}) async {
     var directoryApp = await getApplicationDocumentsDirectory();
-    var pathGames = "${directoryApp.path}/games";
+    var pathGames = "${directoryApp.path}/history";
     var directoryGames = Directory(pathGames);
     if (createIfNonExistent && !directoryGames.existsSync()) {
       directoryGames.createSync();
