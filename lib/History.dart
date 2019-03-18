@@ -26,6 +26,7 @@ class GameHistory {
   ResultGameHistory result;
   bool isLightWinner;
   List<MoveGameHistory> moves;
+  double timestamp;
 
   GameHistory({this.idDevice, this.nameLight, this.nameDark, this.isLightWinner, this.result, this.moves});
 
@@ -36,6 +37,7 @@ class GameHistory {
     result = ResultGameHistory.values[map["result"]];
     isLightWinner = map["is_light_winner"];
     moves = map["moves"].map<MoveGameHistory>((move) => MoveGameHistory(move["notation"], move["time"])).toList();
+    timestamp = map["timestamp"];
   }
 
   Map<String, dynamic> get toMap {
@@ -45,6 +47,7 @@ class GameHistory {
       "name_dark" : nameDark,
       "result" : ResultGameHistory.values.indexOf(result),
       "is_light_winner" : isLightWinner,
+      "timestamp" : TimerGame.timestampNow,
       "moves" : moves.map((move) => {
         "notation" : move.notation,
         "time" : move.time

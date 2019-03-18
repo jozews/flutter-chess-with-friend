@@ -34,6 +34,7 @@ class WidgetGame extends StatefulWidget {
 class StateWidgetGame extends State<WidgetGame> {
 
   static const MILLISECONDS_DELAY_NEW_GAME = 0; // wait a bit to make proper layout
+  static const MILLISECONDS_DELAY_GAME_ANIMATION = 1000; // wait a bit to make proper layout
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -1102,7 +1103,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   
   onTapItemMenuAnimate() {
-    animateGame(millisecondsDelay: 1000);
+    animateGame(millisecondsDelay: MILLISECONDS_DELAY_GAME_ANIMATION);
     setState(() {
       isMenuShowing = false;
     });
@@ -1348,8 +1349,7 @@ class StateWidgetGame extends State<WidgetGame> {
     setState(() { });
     await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
     newGame();
-    var games = await History.getGames();
-    createGameFromHistory(games[1]);
+//    History.clearGames();
   }
 
   
@@ -1919,7 +1919,11 @@ class StateWidgetGame extends State<WidgetGame> {
     await Navigator.push(
       context,
       CleanPageRoute(
-          builder: (_) => WidgetHistory(),
+          builder: (_) => WidgetHistory(completion: (gameHistory) {
+            if (gameHistory != null) {
+              createGameFromHistory(gameHistory);
+            }
+          }),
       ),
     );
   }
