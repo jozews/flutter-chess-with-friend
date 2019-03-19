@@ -131,7 +131,7 @@ class StateWidgetGame extends State<WidgetGame> {
   double get heightItemMenu => heightSquare;
   double get heightWidgetTimeItem => heightSquare*2/3;
 
-  double get widthScreen => (MediaQuery.of(context).size.width;
+  double get widthScreen => MediaQuery.of(context).size.width;
   double get widthScreenSafe => (widthScreen - MediaQuery.of(context).padding.horizontal);
   double get widthDark => widthScreenSafe - heightScreenSafe;
   double get widthSide => widthDark/2;
