@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:device_info/device_info.dart';
+// TODO: ADD PERMISSIONS FOR ANDROID
 //import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
@@ -125,18 +126,20 @@ class StateWidgetGame extends State<WidgetGame> {
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
 
   double get heightScreen => MediaQuery.of(context).size.height;
-  double get heightScreenSafe => (heightScreen - MediaQuery.of(context).padding.vertical);
+  double get heightScreenSafe => (heightScreen - padding.vertical);
   double get heightSquare => heightScreenSafe / 8;
   double get heightNotation => Const.SIZE_NOTATION + insetNotationInner*2;
   double get heightItemMenu => heightSquare;
   double get heightWidgetTimeItem => heightSquare*2/3;
 
   double get widthScreen => MediaQuery.of(context).size.width;
-  double get widthScreenSafe => (widthScreen - MediaQuery.of(context).padding.horizontal);
+  double get widthScreenSafe => (widthScreen - padding.horizontal);
   double get widthDark => widthScreenSafe - heightScreenSafe;
   double get widthSide => widthDark/2;
   double get widthWidgetTime => heightSquare*2;
   double get widthWidgetTimeItem => widthSide;
+
+  EdgeInsets get padding => MediaQuery.of(context).padding;
 
   double get sizePiece => heightSquare * 9/10;
   double get sizeDotSquareValid => heightSquare / 4;
@@ -1769,7 +1772,7 @@ class StateWidgetGame extends State<WidgetGame> {
   
   
   Offset offsetFromGlobalPosition(Offset position) {
-    return Offset(position.dx + MediaQuery.of(context).padding.left - (widthDark/2), position.dy + MediaQuery.of(context).padding.top);
+    return Offset(position.dx - padding.left - (widthDark/2), position.dy - padding.top);
   }
 
 
