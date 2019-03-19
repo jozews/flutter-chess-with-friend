@@ -3,8 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:device_info/device_info.dart';
-// TODO: ADD PERMISSIONS FOR ANDROID
-//import 'package:simple_permissions/simple_permissions.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
 import 'TimerGame.dart';
@@ -1177,7 +1176,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   // ...
   setupConnection() async {
-//    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
     infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
     startAdvertising();
     await Future.delayed(Duration(seconds: 5));
