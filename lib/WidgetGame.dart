@@ -514,8 +514,11 @@ class StateWidgetGame extends State<WidgetGame> {
           ),
           color: isSelected ? Const.COLOR_SELECTED : Colors.transparent,
         ),
+        margin: EdgeInsets.all(
+            insetNotationInner/2
+        ),
         padding: EdgeInsets.all(
-            insetNotationInner
+            insetNotationInner/2
         ),
       ),
     );
@@ -1442,8 +1445,8 @@ class StateWidgetGame extends State<WidgetGame> {
       if (isConnected) {
         var isLocal = payload == null;
         connection.isLocalLight = isLocal ? true : false;
+        isOrientationLight = connection.isLocalLight;
       }
-      isOrientationLight = connection.isLocalLight;
     });
 
     // first move starts and end at the same time (almost - when payload is not null)
