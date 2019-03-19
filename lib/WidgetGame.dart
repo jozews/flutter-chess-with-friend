@@ -1769,7 +1769,7 @@ class StateWidgetGame extends State<WidgetGame> {
   
   
   Offset offsetFromGlobalPosition(Offset position) {
-    return Offset(position.dx - (widthDark/2), position.dy);
+    return Offset(position.dx + MediaQuery.of(context).padding.left - (widthDark/2), position.dy + MediaQuery.of(context).padding.top);
   }
 
 
