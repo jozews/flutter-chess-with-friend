@@ -1169,7 +1169,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   // ...
   setupConnection() async {
-    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+//    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
     infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
     startAdvertising();
     await Future.delayed(Duration(seconds: 5));
