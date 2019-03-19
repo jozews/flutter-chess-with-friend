@@ -2,7 +2,7 @@
 name: chess_with_friends
 description: Play chess with multiple devices nearby
 
-version: 1.0.0+8
+version: 1.0.0+9
 
 environment:
   sdk: ">=2.1.0 <3.0.0"

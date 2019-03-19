@@ -1,9 +1,9 @@
 
 import 'package:test/test.dart';
 
-import 'package:chess_umbrella/Game.dart';
-import 'package:chess_umbrella/PayloadGame.dart';
-import 'package:chess_umbrella/History.dart';
+import 'package:chess_with_friends/Game.dart';
+import 'package:chess_with_friends/PayloadGame.dart';
+import 'package:chess_with_friends/History.dart';
 
 void main() {
 

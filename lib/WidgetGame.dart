@@ -38,7 +38,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // GAME
+  // GAMEf
   // ...
   Game game;
   TimerGame timer;
@@ -158,11 +158,11 @@ class StateWidgetGame extends State<WidgetGame> {
   Color get colorTagSquare => accentBoard.shade700;
 
   double get insetIconMenu => (heightSquare - Const.SIZE_ICON_MENU)/2;
-  double get insetTime => isConnected ? heightSquare : (heightSquare - Const.SIZE_TIME)/2;
+  double get insetTime => (heightSquare - Const.SIZE_TIME)/2;
   double get insetNameConnection => (heightSquare - Const.SIZE_NAME_CONNECTION)/2;
   double get insetTitleAlert => heightSquare*1/3;
   double get insetActionAlert => heightSquare*1/3;
-  double get insetNotationsStart => (isConnected ? heightSquare*3/2 : heightSquare) + (heightSquare - heightNotation)/2;
+  double get insetNotationsStart => (isConnected ? heightSquare*4/2 : heightSquare) + (heightSquare - heightNotation)/2;
   double get insetNotationsEnd => 0.0;
   double get insetNotationInner => heightSquare - Const.SIZE_NOTATION*2;
 
@@ -185,7 +185,9 @@ class StateWidgetGame extends State<WidgetGame> {
       key: scaffoldKey,
       body: Container(
         child: SafeArea(
+            top: true,
             left: true,
+            right: true,
             bottom: true,
             child: Stack(
               children: <Widget>[
@@ -322,8 +324,8 @@ class StateWidgetGame extends State<WidgetGame> {
                         ),
                       ),
                       margin: EdgeInsets.only(
-                        bottom: atLeft ? isConnected ? heightSquare : insetTime : 0.0,
-                        top: !atLeft ? isConnected ? heightSquare : insetTime : 0.0,
+                        bottom: atLeft ? insetTime : 0.0,
+                        top: !atLeft ? insetTime : 0.0,
                       ),
                     ) : Container(),
                   ],
@@ -893,7 +895,10 @@ class StateWidgetGame extends State<WidgetGame> {
     var square = squareFromOffset(offset);
     var piece = positions.last[square];
     if (squaresSelected.isEmpty && piece != null) {
-      var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      var squaresValid = List<Square>();
+      if (!isConnected || connection.isLocalLight == game.isLightToMove) {
+        squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      }
       setState(() {
         squaresSelected = [square];
         this.squaresValid = squaresValid;
@@ -907,7 +912,10 @@ class StateWidgetGame extends State<WidgetGame> {
         });
       }
       else if (piece != null) {
-        var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+        var squaresValid = List<Square>();
+        if (!isConnected || connection.isLocalLight == game.isLightToMove) {
+          squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+        }
         setState(() {
           squaresSelected = [square];
           this.squaresValid = squaresValid;
@@ -950,7 +958,10 @@ class StateWidgetGame extends State<WidgetGame> {
     var square = squareFromOffset(offset);
     var piece = positions.last[square];
     if (piece != null) {
-      var squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      var squaresValid = List<Square>();
+      if (!isConnected || connection.isLocalLight == game.isLightToMove) {
+        squaresValid = game.getValidMoves(square).map((move) => move.square2).toList();
+      }
       piecePanning = positions.last[square];
       var offsetCentered = Offset(offset.dx - heightSquare/2, offset.dy - heightSquare/2);
       setState(() {
@@ -1161,12 +1172,12 @@ class StateWidgetGame extends State<WidgetGame> {
     await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
     infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
     startAdvertising();
-    // NOTE: MIGHT BE GOOD TO ADD DELAY HERE
+    await Future.delayed(Duration(seconds: 5));
     startDiscovering();
   }
 
 
-  startAdvertising() {
+  startAdvertising() async {
     Nearby.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
       switch (advertise.type) {
         case TypeLifecycle.initiated:
@@ -1204,7 +1215,7 @@ class StateWidgetGame extends State<WidgetGame> {
       switch (lifecycle.type) {
         case TypeLifecycle.initiated:
           acceptConnection(lifecycle, isDiscoverer: true);
-          connect(idEndpoint: discovery.idEndpoint, nameEndpoint: discovery.nameEndpoint, isDiscoverer: true);
+          connect(idEndpoint: lifecycle.idEndpoint, nameEndpoint: lifecycle.nameEndpoint, isDiscoverer: true);
           break;
         case TypeLifecycle.result:
           break;
@@ -1229,20 +1240,24 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  connect({String idEndpoint, String nameEndpoint, bool isDiscoverer}) {
+  connect({String idEndpoint, String nameEndpoint, bool isDiscoverer}) async {
+
+    await Future.delayed(Duration(seconds: 5)); // wait for accept handshake to complete
+
+    this.connection = Connection(idEndpoint, nameEndpoint);
 
     var payloadIdDevice = PayloadGame.setIdDevice(infoDeviceAndroid.androidId);
     sendPayload(payloadIdDevice);
 
-    if (isDiscoverer) {
-      var payloadControl = PayloadGame.setControl(timer.control);
-      sendPayload(payloadControl);
-    }
-
-    var connection = Connection(idEndpoint, nameEndpoint);
+//    if (isDiscoverer) {
+//      // TODO: MERGE CALLS
+//      await Future.delayed(Duration(seconds: 10));
+//      var payloadControl = PayloadGame.setControl(timer.control);
+//      sendPayload(payloadControl);
+//    }
 
     setState(() {
-      this.connection = connection;
+      connection = connection;
       connection.isLocalLight = isDiscoverer ? true : true; // both devices start as white
     });
 
@@ -1263,6 +1278,10 @@ class StateWidgetGame extends State<WidgetGame> {
     showSnackBar(
         widgetConnectionLost(isAbort: isGameOngoing)
     );
+
+    setState(() {
+      this.connection = null;
+    });
   }
 
 
@@ -1419,6 +1438,7 @@ class StateWidgetGame extends State<WidgetGame> {
         var isLocal = payload == null;
         connection.isLocalLight = isLocal ? true : false;
       }
+      isOrientationLight = connection.isLocalLight;
     });
 
     // first move starts and end at the same time (almost - when payload is not null)
@@ -1469,6 +1489,11 @@ class StateWidgetGame extends State<WidgetGame> {
     if (isValid) {
 
       var timestampNow = TimerGame.timestampNow;
+
+      if (isConnected) {
+        var payloadEnd = PayloadGame.endMove(move, timestampNow);
+        sendPayload(payloadEnd);
+      }
 
       if (!isGameOngoing) {
         startGame(payload: payload);
@@ -1585,8 +1610,8 @@ class StateWidgetGame extends State<WidgetGame> {
       connection.didLocalDraw = null;
       connection.didRemoteDraw = null;
 
-      var scoreLocalUpdated = connection.scoreLocal;
-      var scoreRemoteUpdated = connection.scoreRemote;
+      var scoreLocalUpdated = connection.scoreLocal ?? 0;
+      var scoreRemoteUpdated = connection.scoreRemote ?? 0;
 
       if (game.state == StateGame.checkmate) {
         var didLocalWin = connection.isLocalLight == !game.isLightToMove;

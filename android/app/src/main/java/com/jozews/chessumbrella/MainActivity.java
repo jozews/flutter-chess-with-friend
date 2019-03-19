@@ -122,7 +122,7 @@ class PayloadManager extends PayloadCallback implements EventChannel.StreamHandl
     public void onPayloadReceived(String idEndpoint, Payload payload) {
         HashMap<String, Object> map = new HashMap<>();
         map.put("type", 0);
-        map.put("payload_bytes", payload.asBytes());
+        map.put("bytes", payload.asBytes());
         eventSink.success(map);
     }
 
@@ -183,10 +183,10 @@ public class MainActivity extends FlutterActivity {
         new EventChannel(getFlutterView(), nameChannelStartDiscovering).setStreamHandler(handlerStartDiscovery);
 
         handlerRequestConnection = new LifecycleManager(this);
-        new EventChannel(getFlutterView(), nameChannelRequestConnection).setStreamHandler(handlerStartDiscovery);
+        new EventChannel(getFlutterView(), nameChannelRequestConnection).setStreamHandler(handlerRequestConnection);
 
         handlerAcceptConnection = new PayloadManager(this);
-        new EventChannel(getFlutterView(), nameChannelAcceptConnection).setStreamHandler(handlerStartDiscovery);
+        new EventChannel(getFlutterView(), nameChannelAcceptConnection).setStreamHandler(handlerAcceptConnection);
 
         MainActivity activity = this;
 

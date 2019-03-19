@@ -65,7 +65,9 @@ class Payload {
 
   Payload.fromMap(Map map) {
     this.type = TypePayload.values[map["type"]];
-    this.bytes = Uint8List.fromList(map["bytes"]);
+    if (map["bytes"] != null) {
+      this.bytes = Uint8List.fromList(map["bytes"]);
+    }
     this.countTotalBytes = map["count_total_bytes"];
     this.countBytesTransferred = map["count_bytes_transferred"];
     this.status = map["status"];
