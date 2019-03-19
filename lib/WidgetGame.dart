@@ -124,14 +124,16 @@ class StateWidgetGame extends State<WidgetGame> {
   Color get colorBoardDark => accentBoard.shade200.withAlpha((0.8 * 255).toInt());
   Color get colorBoardLight => accentBoard.shade200.withAlpha((0.3 * 255).toInt());
 
-  double get heightScreen => (MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical);
-  double get heightSquare => heightScreen / 8;
+  double get heightScreen => MediaQuery.of(context).size.height;
+  double get heightScreenSafe => (heightScreen - MediaQuery.of(context).padding.vertical);
+  double get heightSquare => heightScreenSafe / 8;
   double get heightNotation => Const.SIZE_NOTATION + insetNotationInner*2;
   double get heightItemMenu => heightSquare;
   double get heightWidgetTimeItem => heightSquare*2/3;
 
-  double get widthScreen => (MediaQuery.of(context).size.width - MediaQuery.of(context).padding.horizontal);
-  double get widthDark => widthScreen - heightScreen;
+  double get widthScreen => (MediaQuery.of(context).size.width;
+  double get widthScreenSafe => (widthScreen - MediaQuery.of(context).padding.horizontal);
+  double get widthDark => widthScreenSafe - heightScreenSafe;
   double get widthSide => widthDark/2;
   double get widthWidgetTime => heightSquare*2;
   double get widthWidgetTimeItem => widthSide;
@@ -597,11 +599,11 @@ class StateWidgetGame extends State<WidgetGame> {
           ],
         ),
         color: colorBackground1,
-        height: heightScreen,
+        height: heightScreenSafe,
         width: widthSide,
       ),
       color: colorBackground2,
-      height: heightScreen,
+      height: heightScreenSafe,
       width: widthSide,
     );
   }
@@ -1834,7 +1836,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   
   int getIndexChildrenFromYPosition(double yPosition, {bool atLeft}) {
-    var yPositionNormal = atLeft ? -1*(yPosition + insetNotationsStart - heightScreen) : yPosition - insetNotationsStart;
+    var yPositionNormal = atLeft ? -1*(yPosition + insetNotationsStart - heightScreenSafe) : yPosition - insetNotationsStart;
     var indexChildren = min(countColumnChildrenMax - 1, max(0, yPositionNormal/heightNotation)).floor();
     return indexChildren;
   }
