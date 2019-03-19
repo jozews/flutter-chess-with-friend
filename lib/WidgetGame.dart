@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:device_info/device_info.dart';
-//import 'package:simple_permissions/simple_permissions.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 import 'Game.dart';
 import 'TimerGame.dart';
@@ -33,7 +33,7 @@ class WidgetGame extends StatefulWidget {
 
 class StateWidgetGame extends State<WidgetGame> {
 
-  static const MILLISECONDS_DELAY_NEW_GAME = 0; // wait a bit to make proper layout
+  static const MILLISECONDS_DELAY_NEW_GAME = 500; // wait a bit to make proper layout
   static const MILLISECONDS_DELAY_GAME_ANIMATION = 1000; // wait a bit to make proper layout
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
@@ -1169,7 +1169,7 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   // ...
   setupConnection() async {
-//    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
     infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
     startAdvertising();
     await Future.delayed(Duration(seconds: 5));
