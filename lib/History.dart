@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'TimerGame.dart';
 
 enum ResultGameHistory {
-  checkmate, stalemate, insufficientMaterial, timeOver, resignation, draw, abort
+  checkmate, stalemate, insufficientMaterial, timeOver, resignation, draw, abort, end, pause
 }
 
 

@@ -113,7 +113,13 @@ class StateWidgetHistory extends State<WidgetHistory> {
         title = "$nameWinner draw$suffixVerb by insufficient material ${showsLoser ? "against $nameLoser" : ""}";
         break;
       case ResultGameHistory.abort:
-        title = "game ended/aborted";
+        title = "game aborted";
+        break;
+      case ResultGameHistory.end:
+        title = "game ended";
+        break;
+      case ResultGameHistory.pause:
+        title = "game paused";
         break;
     }
     return GestureDetector(

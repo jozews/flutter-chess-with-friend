@@ -1,6 +1,5 @@
 
 import 'dart:async';
-import 'dart:math';
 
 
 class MoveTimer {
@@ -116,7 +115,7 @@ class TimerGame {
 
       if (timeUpdatedFloored != getTime(isLightTicking).floor()) {
         setTime(isLightTicking, timeUpdated);
-        streamController.add(timeUpdatedFloored);
+        streamController.add(null);
       }
     }
 
@@ -129,38 +128,47 @@ class TimerGame {
     tick();
   }
 
+
   addTimestampStart({double timestamp}) {
     // increment
-    var timeIncremented = timeOfTicking + incrementOnStart;
-    setTime(isLightTicking, timeIncremented);
+    var timeUpdated = timeOfTicking + incrementOnStart;
+    setTime(isLightTicking, timeUpdated);
     // tick
     timestampStart = timestamp ?? timestampNow;
     timeOnStart = timeOfTicking;
   }
 
+
   addTimestampEnd({double timestamp}) {
 
-    // update
-    var timeUpdated = timeOnStart - (timestampNow - timestampStart);
-    var timeUpdatedMaxed = max(0.0, timeUpdated);
+    var timestampEnd = timestamp ?? timestampNow;
 
-    var timeIncremented = timeUpdatedMaxed + incrementOnEnd;
-    setTime(isLightTicking, timeIncremented);
-    streamController.add(timeIncremented);
+    if (timestampStart == null) {
+      timestampStart = timestampEnd;
+      timeOnStart = timeOfTicking;
+    }
+
+    var timeUpdated = timeOnStart - (timestampEnd - timestampStart);
+    timeUpdated = timeUpdated + incrementOnEnd;
+
+    setTime(isLightTicking, timeUpdated);
+    streamController.add(null);
 
     // add move
-    var move = MoveTimer(timeIncremented);
+    var move = MoveTimer(timeUpdated);
     moves.add(move);
 
     // halt tick
     timestampStart = null;
   }
 
+
   Stream start() {
     stopped = false;
     tick();
     return streamController.stream;
   }
+
 
   stop() {
     stopped = true;
