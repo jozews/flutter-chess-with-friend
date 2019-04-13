@@ -151,9 +151,8 @@ class StateWidgetGame extends State<WidgetGame> {
   bool get canPayloadGameDraw => isGameOngoing;
   bool get canSelectNotations => !isGameOngoing;
 
-  bool get showsMenuNew => typeState != TypeStateWidgetGame.ongoing;
-  bool get showsMenuNewStandard => showsMenuNew && typeGame == TypeGame.chess12;
-  bool get showsMenuNewChess12 => showsMenuNew && typeGame == TypeGame.standard;
+  bool get showsMenuNewStandard => (typeState != TypeStateWidgetGame.ongoing && typeGame == TypeGame.chess12) || typeState == TypeStateWidgetGame.ended;
+  bool get showsMenuNewChess12 => (typeState != TypeStateWidgetGame.ongoing && typeGame == TypeGame.standard) || typeState == TypeStateWidgetGame.ended;
   bool get showsMenuEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
   bool get showsMenuResign => isConnected && isGameOngoing;
   bool get showsMenuDraw => isConnected && isGameOngoing;

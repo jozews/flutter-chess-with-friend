@@ -352,7 +352,7 @@ class Game {
         }
         else if (isDeltaValidForKingMove(move, isCastle: true)) {
           var deltaCastle = getDeltaReducedFromMove(move);
-          var isShort = (move.square1.row == 5) == (deltaCastle.column > 0) ? false : true;
+          var isShort = (move.square1.column == 5) == (deltaCastle.column > 0) ? true : false;
           if (!canCastleKing(pieceToMove, isShort: isShort)) {
             return false;
           }
@@ -466,7 +466,7 @@ class Game {
       return [];
     }
 
-   var squares2 =  List<Square>();
+    var squares2 =  List<Square>();
     var deltas = getDeltasForPiece(pieceToMove);
 
     switch (pieceToMove.type) {
