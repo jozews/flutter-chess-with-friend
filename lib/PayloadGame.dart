@@ -19,6 +19,7 @@ class PayloadGame {
   double timestampEnd;
   ControlTimer control;
   String idDevice;
+  TypeGame typeGame;
 
   PayloadGame.setIdDevice(this.idDevice) {
     this.type = TypePayloadGame.setIdDevice;
@@ -28,7 +29,7 @@ class PayloadGame {
     this.type = TypePayloadGame.setControl;
   }
 
-  PayloadGame.newGame() {
+  PayloadGame.newGame(this.typeGame) {
     this.type = TypePayloadGame.newGame;
   }
 
@@ -56,6 +57,9 @@ class PayloadGame {
     ByteData byteData = ByteData.view(list.buffer);
     this.type = TypePayloadGame.values[byteData.getInt8(0)];
     switch (type) {
+      case TypePayloadGame.newGame:
+        this.typeGame = TypeGame.values[byteData.getInt8(1)];
+        break;
       case TypePayloadGame.setIdDevice:
         var bytesString =  byteData.buffer.asUint8List(1, byteData.lengthInBytes - 1);
         this.idDevice = decodeUtf8(bytesString);
@@ -80,9 +84,15 @@ class PayloadGame {
   Uint8List toBytes() {
     ByteData byteData;
     switch (type) {
+      case TypePayloadGame.newGame:
+        byteData = new ByteData(2);
+        byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
+        byteData.setInt8(1, TypeGame.values.indexOf(typeGame));
+        break;
       case TypePayloadGame.setIdDevice:
         var bytes = encodeUtf8(idDevice);
-        byteData = new ByteData(1 + bytes.length);
+        var length = 1 + bytes.length;
+        byteData = new ByteData(length);
         byteData.setInt8(0, TypePayloadGame.values.indexOf(type));
         bytes.asMap().forEach((idx, byte) {
           byteData.setInt8(1 + idx, byte);

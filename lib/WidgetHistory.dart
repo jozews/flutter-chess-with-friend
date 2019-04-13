@@ -87,7 +87,7 @@ class StateWidgetHistory extends State<WidgetHistory> {
 
 
   Widget widgetGame(GameHistory game) {
-    // TODO: SHOWS WHEN
+    // TODO: SHOW WHEN
     var nameWinner = game.isLightWinner ?? true ? game.nameLight ?? Const.STRING_LIGHT : game.nameDark ?? Const.STRING_DARK;
     var nameLoser = !(game.isLightWinner ?? true) ? game.nameLight ?? Const.STRING_LIGHT : game.nameDark ?? Const.STRING_DARK;
     var suffixVerb = nameWinner != Const.STRING_YOU ? "s" : "";

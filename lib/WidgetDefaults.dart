@@ -19,6 +19,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
   // DEFAULTS
   // ...
   var defaults = Defaults();
+  bool didLoadDefaults = false;
 
   MaterialAccentColor get accentBoard => defaults.indexAccent != null ? Const.ACCENTS[defaults.indexAccent] : null;
   Color get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -34,7 +35,9 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
 
   setup() async {
     await defaults.getBoard();
-    setState(() { });
+    setState(() {
+      didLoadDefaults = true;
+    });
   }
 
   @override
@@ -46,9 +49,15 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
           bottom: true,
           child: Stack(
             children: <Widget>[
-              ListView(
-                children: widgetsShowValidMoves() + widgetsShowTagSquares() + widgetsAutoRotates() + widgetsColors() + widgetsPieces(),
-              ),
+              didLoadDefaults ? ListView(
+                children:
+                      widgetsShowValidMoves()
+                    + widgetsShowTagSquares()
+                    + widgetsRotatesAutomatically()
+                    + widgetsPromotesAutomatically()
+                    + widgetsColors()
+                    + widgetsPieces(),
+              ) : Container(),
               widgetIconClose(),
             ],
           ),
@@ -96,7 +105,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "yes",
-                    isSelected: defaults.showsValidMoves ?? false
+                    isSelected: defaults.showsValidMoves
                 ),
                 onTap: () {
                   setState(() {
@@ -107,7 +116,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "no",
-                    isSelected: !(defaults.showsValidMoves ?? true)
+                    isSelected: !defaults.showsValidMoves
                 ),
                 onTap: () {
                   setState(() {
@@ -140,7 +149,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "yes",
-                    isSelected: defaults.showsTagSquares ?? false
+                    isSelected: defaults.showsTagSquares
                 ),
                 onTap: () {
                   setState(() {
@@ -151,7 +160,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "no",
-                    isSelected: !(defaults.showsTagSquares ?? true)
+                    isSelected: !defaults.showsTagSquares
                 ),
                 onTap: () {
                   setState(() {
@@ -170,7 +179,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
     ];
   }
 
-  List<Widget> widgetsAutoRotates() {
+  List<Widget> widgetsRotatesAutomatically() {
     return [
       Center(
           child: widgetTitleSettings(
@@ -184,22 +193,22 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "yes",
-                    isSelected: defaults.autoRotates ?? false
+                    isSelected: defaults.rotatesAutomatically
                 ),
                 onTap: () {
                   setState(() {
-                    defaults.autoRotates = true;
+                    defaults.rotatesAutomatically = true;
                   });
                 },
               ),
               GestureDetector(
                 child: widgetSelectionSettings(
                     title: "no",
-                    isSelected: !(defaults.autoRotates ?? true)
+                    isSelected: !defaults.rotatesAutomatically
                 ),
                 onTap: () {
                   setState(() {
-                    defaults.autoRotates = false;
+                    defaults.rotatesAutomatically = false;
                   });
                 },
               ),
@@ -213,6 +222,52 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
       ),
     ];
   }
+
+
+  List<Widget> widgetsPromotesAutomatically() {
+    return [
+      Center(
+          child: widgetTitleSettings(
+              "Promote always to queen"
+          )
+      ),
+      Center(
+        child: Container(
+          child: Wrap(
+            children: <Widget>[
+              GestureDetector(
+                child: widgetSelectionSettings(
+                    title: "yes",
+                    isSelected: defaults.promotesAutomatically
+                ),
+                onTap: () {
+                  setState(() {
+                    defaults.promotesAutomatically = true;
+                  });
+                },
+              ),
+//              GestureDetector(
+//                child: widgetSelectionSettings(
+//                    title: "no",
+//                    isSelected: !defaults.promotesAutomatically
+//                ),
+//                onTap: () {
+//                  setState(() {
+//                    defaults.promotesAutomatically = false;
+//                  });
+//                },
+//              ),
+            ],
+            spacing: 0,
+          ),
+          margin: EdgeInsets.only(
+            top: Const.INSET_VERTICAL_SHORT_SETTINGS,
+          ),
+        ),
+      ),
+    ];
+  }
+
 
   List<Widget> widgetsColors() {
     return [
@@ -228,7 +283,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               return GestureDetector(
                 child: widgetAccent(
                   accent,
-                  isSelected: accent == accentBoard ?? false,
+                  isSelected: accent == accentBoard,
                 ),
                 onTap: () {
                   setState(() {
@@ -265,7 +320,7 @@ class StateWidgetDefaults extends State<WidgetDefaults> {
               return GestureDetector(
                 child: widgetSetPiece(
                   namePiece,
-                  isSelected: (Const.NAME_PIECES.indexOf(namePiece) == defaults.indexNamePieces) ?? false,
+                  isSelected: (Const.NAME_PIECES.indexOf(namePiece) == defaults.indexNamePieces),
                 ),
                 onTap: () {
                   setState(() {

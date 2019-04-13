@@ -38,11 +38,11 @@ class StateWidgetGame extends State<WidgetGame> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // GAMEf
+  // GAME
   // ...
+  TypeGame typeGame = TypeGame.chess12;
   Game game;
   TimerGame timer;
-//  GameHistory gameHistory;
 
   // BOARD
   // ...
@@ -66,7 +66,6 @@ class StateWidgetGame extends State<WidgetGame> {
   // TIME
   // ...
   ControlTimer controlTimer = ControlTimer.min5; // defaults blitz
-  var areControlsShowing = false;
 
   // CONNECTION
   Connection connection;
@@ -88,6 +87,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   // MENU
   // ...
+  List<Widget> widgetsMenu;
   var isMenuShowing = false;
 
   // ORIENTATION
@@ -109,15 +109,15 @@ class StateWidgetGame extends State<WidgetGame> {
   double get heightScreenSafe => (heightScreen - padding.vertical);
   double get heightSquare => heightScreenSafe / 8;
   double get heightNotation => Const.SIZE_NOTATION + insetNotationInner*2;
-  double get heightItemMenu => heightSquare;
-  double get heightWidgetTimeItem => heightSquare*2/3;
+  double get heightMenu => heightSquare;
+  double get heightWidgetTime => heightSquare*2/3;
 
   double get widthScreen => MediaQuery.of(context).size.width;
   double get widthScreenSafe => (widthScreen - padding.horizontal);
   double get widthDark => widthScreenSafe - heightScreenSafe;
   double get widthSide => widthDark/2;
-  double get widthWidgetTime => heightSquare*2;
-  double get widthWidgetTimeItem => widthSide;
+  double get widthWidgetTime => widthSide;
+  double get widthAlert => heightSquare * 4.5;
 
   EdgeInsets get padding => MediaQuery.of(context).padding;
 
@@ -151,14 +151,16 @@ class StateWidgetGame extends State<WidgetGame> {
   bool get canPayloadGameDraw => isGameOngoing;
   bool get canSelectNotations => !isGameOngoing;
 
-  bool get showsItemMenuNew => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
-  bool get showsItemMenuEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
-  bool get showsItemMenuResign => isConnected && isGameOngoing;
-  bool get showsItemMenuDraw => isConnected && isGameOngoing;
-  bool get showsItemMenuTime => isGameSetup;
-  bool get showsItemMenuHistory => !isConnected;
-  bool get showsItemMenuAnimate => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
-  bool get showsDim => isAlertShowing || isMenuShowing || areControlsShowing;
+  bool get showsMenuNew => typeState != TypeStateWidgetGame.ongoing;
+  bool get showsMenuNewStandard => showsMenuNew && typeGame == TypeGame.chess12;
+  bool get showsMenuNewChess12 => showsMenuNew && typeGame == TypeGame.standard;
+  bool get showsMenuEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
+  bool get showsMenuResign => isConnected && isGameOngoing;
+  bool get showsMenuDraw => isConnected && isGameOngoing;
+  bool get showsMenuTime => isGameSetup;
+  bool get showsMenuHistory => !isConnected;
+  bool get showsMenuAnimate => typeState == TypeStateWidgetGame.ended || typeState == TypeStateWidgetGame.readonly;
+  bool get showsDim => isAlertShowing || isMenuShowing;
   bool get showsNewInAlert => true;
 
   Color get colorBackground1 => Colors.black.withAlpha((0.75 * 255).toInt());
@@ -205,7 +207,6 @@ class StateWidgetGame extends State<WidgetGame> {
                 showsDim ? widgetDim() : Container(),
                 isMenuShowing ? widgetMenu() : Container(),
                 isAlertShowing ? widgetAlert() : Container(),
-                areControlsShowing ? widgetTime() : Container(),
                 widgetIconMenu(),
               ],
             )
@@ -527,80 +528,7 @@ class StateWidgetGame extends State<WidgetGame> {
     return Container(
       child: Container(
         child: ListView(
-          children: <Widget>[
-            showsItemMenuNew ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "new"
-              ),
-              onTap: () {
-                onTapItemMenuNew();
-              },
-            ) : Container(),
-            showsItemMenuEnd ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "end"
-              ),
-              onTap: () {
-                onTapItemMenuEnd();
-              },
-            ) : Container(),
-            showsItemMenuResign ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "resign"
-              ),
-              onTap: () {
-                onTapItemMenuResign();
-              },
-            ) : Container(),
-            showsItemMenuDraw ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "draw"
-              ),
-              onTap: () {
-                onTapItemMenuDraw();
-              },
-            ) : Container(),
-            GestureDetector(
-              child: widgetItemMenu(
-                  title: "flip"
-              ),
-              onTap: () {
-                onTapItemMenuOrientation();
-              },
-            ),
-            showsItemMenuAnimate ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "animate"
-              ),
-              onTap: () {
-                onTapItemMenuAnimate();
-              },
-            ) : Container(),
-            showsItemMenuTime ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "time"
-              ),
-              onTap: () {
-                onTapItemMenuTime();
-              },
-            ) : Container(),
-            GestureDetector(
-              child: widgetItemMenu(
-                  title: "board"
-              ),
-              onTap: () {
-                onTapItemMenuBoard();
-              },
-            ),
-            showsItemMenuHistory ? GestureDetector(
-              child: widgetItemMenu(
-                  title: "history"
-              ),
-              onTap: () {
-                onTapItemMenuHistory();
-              },
-            ) : Container(),
-          ],
+          children: widgetsMenu,
         ),
         color: colorBackground1,
         height: heightScreenSafe,
@@ -610,6 +538,145 @@ class StateWidgetGame extends State<WidgetGame> {
       height: heightScreenSafe,
       width: widthSide,
     );
+  }
+
+
+  List<Widget> widgetsMenuEntry() {
+    return [
+      showsMenuNewStandard ? GestureDetector(
+        child: widgetItemMenu(
+            title: "new"
+        ),
+        onTap: () {
+          onTapMenuNew();
+        },
+      ) : Container(),
+      showsMenuNewChess12 ? GestureDetector(
+        child: widgetItemMenu(
+            title: "new chess12"
+        ),
+        onTap: () {
+          onTapMenuNewChess12();
+        },
+      ) : Container(),
+      showsMenuEnd ? GestureDetector(
+        child: widgetItemMenu(
+            title: "end"
+        ),
+        onTap: () {
+          onTapMenuEnd();
+        },
+      ) : Container(),
+      showsMenuResign ? GestureDetector(
+        child: widgetItemMenu(
+            title: "resign"
+        ),
+        onTap: () {
+          onTapMenuResign();
+        },
+      ) : Container(),
+      showsMenuDraw ? GestureDetector(
+        child: widgetItemMenu(
+            title: "draw"
+        ),
+        onTap: () {
+          onTapMenuDraw();
+        },
+      ) : Container(),
+      GestureDetector(
+        child: widgetItemMenu(
+            title: "flip"
+        ),
+        onTap: () {
+          onTapMenuOrientation();
+        },
+      ),
+      showsMenuAnimate ? GestureDetector(
+        child: widgetItemMenu(
+            title: "animate"
+        ),
+        onTap: () {
+          onTapMenuAnimate();
+        },
+      ) : Container(),
+      showsMenuTime ? GestureDetector(
+        child: widgetItemMenu(
+            title: "time"
+        ),
+        onTap: () {
+          onTapMenuTime();
+        },
+      ) : Container(),
+      GestureDetector(
+        child: widgetItemMenu(
+            title: "board"
+        ),
+        onTap: () {
+          onTapMenuBoard();
+        },
+      ),
+      showsMenuHistory ? GestureDetector(
+        child: widgetItemMenu(
+            title: "history"
+        ),
+        onTap: () {
+          onTapMenuHistory();
+        },
+      ) : Container(),
+    ];
+  }
+
+
+  List<Widget> widgetsMenuTime() {
+    var widgets = <Widget>[
+      GestureDetector(
+        child: widgetItemMenu(
+            title: "back"
+        ),
+        onTap: () {
+          onTapMenuTimeBack();
+        },
+      )
+    ];
+    var widgetsControls = ControlTimer.values.map<Widget>((control) {
+      String title;
+      switch (control) {
+        case ControlTimer.min1:
+          title = "1 min";
+          break;
+        case ControlTimer.min1plus1:
+          title = "1 min and 1 bonus";
+          break;
+        case ControlTimer.min3:
+          title = "3 min";
+          break;
+        case ControlTimer.min3plus2:
+          title = "3 min and 2 bonus";
+          break;
+        case ControlTimer.min5:
+          title = "5 min";
+          break;
+        case ControlTimer.min5plus2:
+          title = "5 min and 2 bonus";
+          break;
+        case ControlTimer.min10:
+          title = "10 min";
+          break;
+        case ControlTimer.min15:
+          title = "15 min";
+          break;
+      }
+      return GestureDetector(
+        child: widgetItemMenu(
+            title: title
+        ),
+        onTap: () {
+          onTapMenuTimeControl(control);
+        },
+      );
+    }).toList();
+    widgets.addAll(widgetsControls);
+    return widgets;
   }
 
 
@@ -638,7 +705,7 @@ class StateWidgetGame extends State<WidgetGame> {
           ),
         ],
       ),
-      height: heightItemMenu,
+      height: heightMenu,
     );
   }
 
@@ -673,129 +740,74 @@ class StateWidgetGame extends State<WidgetGame> {
                     height: Const.SIZE_DIVISOR,
                   ),
                 ) : Container(),
-                GestureDetector(
-                  child: Container(
-                    child: Text(
-                      "new",
-                      style: TextStyle(
-                          color: Colors.white
+                IntrinsicHeight(
+                  child: Row(
+                    children: <Widget>[
+                      GestureDetector(
+                        child: Center(
+                          child: Container(
+                            child: Text(
+                              "new",
+                              style: TextStyle(
+                                  color: Colors.white
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            width: (widthAlert - Const.SIZE_DIVISOR)/2,
+                            padding: EdgeInsets.all(
+                              insetActionAlert,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          newGame();
+                          setState(() {
+                            titleAlert = null;
+                          });
+                        },
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    padding: EdgeInsets.all(
-                      insetActionAlert,
-                    ),
+                      Expanded(
+                        child: Container(
+                          color: Colors.white,
+                          width: Const.SIZE_DIVISOR,
+                        ),
+                      ),
+                      GestureDetector(
+                        child: Center(
+                          child: Container(
+                            child: Text(
+                              "new chess12",
+                              style: TextStyle(
+                                  color: Colors.white
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            width: (widthAlert - Const.SIZE_DIVISOR)/2,
+                            padding: EdgeInsets.all(
+                              insetActionAlert,
+                            ),
+                          ),
+                        ),
+                        onTap: () {
+                          newGame(type: TypeGame.chess12);
+                          setState(() {
+                            titleAlert = null;
+                          });
+                        },
+                      )
+                    ],
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                   ),
-                  onTap: () {
-                    if (isGameEnded) {
-                      newGame();
-                    }
-                    setState(() {
-                      titleAlert = null;
-                    });
-                  },
                 ),
               ],
               mainAxisSize: MainAxisSize.min,
             ),
             color: colorBackground1,
-            width: heightSquare * 4,
+            width: widthAlert,
           ),
           color: colorBackground2,
         ),
       ),
-    );
-  }
-
-
-  Widget widgetTime() {
-    return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.all(
-          Radius.circular(
-            Const.RADIUS_SOFT
-          )
-        ),
-        child: Container(
-          child: Container(
-            child: Column(
-              children: ControlTimer.values.map<Widget>((control) {
-                return GestureDetector(
-                  child: Container(
-                    child: widgetItemTime(
-                        control
-                    ),
-                    height: heightWidgetTimeItem,
-                  ),
-                  onTap: () {
-                    onTapItemTimeControl(
-                        control
-                    );
-                  },
-                );
-              }).toList(),
-              mainAxisSize: MainAxisSize.min,
-            ),
-            color: colorBackground1,
-          ),
-          color: colorBackground2,
-          width: widthWidgetTimeItem,
-        ),
-      ),
-    );
-  }
-
-
-  Widget widgetItemTime(ControlTimer control) {
-    String title;
-    switch (control) {
-      case ControlTimer.min1:
-        title = "1 min";
-        break;
-      case ControlTimer.min1plus1:
-        title = "1 min and 1 bonus";
-        break;
-      case ControlTimer.min3:
-        title = "3 min";
-        break;
-      case ControlTimer.min3plus2:
-        title = "3 min and 2 bonus";
-        break;
-      case ControlTimer.min5:
-        title = "5 min";
-        break;
-      case ControlTimer.min5plus2:
-        title = "5 min and 2 bonus";
-        break;
-      case ControlTimer.min10:
-        title = "10 min";
-        break;
-      case ControlTimer.min15:
-        title = "15 min";
-        break;
-    }
-    return Stack(
-      children: <Widget>[
-        Align(
-          alignment: Alignment.center,
-          child: Text(
-            title,
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: Const.SIZE_SUBTITLE,
-                fontWeight: FontWeight.w400
-            ),
-          ),
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(
-            color: Colors.white,
-            height: Const.SIZE_DIVISOR,
-            width: widthSide - Const.INSET_DIVISOR_ITEM_MENU,
-          ),
-        ),
-      ],
     );
   }
 
@@ -1076,9 +1088,6 @@ class StateWidgetGame extends State<WidgetGame> {
       if (isAlertShowing) {
         titleAlert = null;
       }
-      else if (areControlsShowing) {
-        areControlsShowing = false;
-      }
       else if (isMenuShowing) {
         isMenuShowing = false;
       }
@@ -1087,21 +1096,28 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   onTapIconMenu() {
+    var widgetsMenu = widgetsMenuEntry();
     setState(() {
-      areControlsShowing = false;
-      isMenuShowing = !isMenuShowing;
+      this.widgetsMenu = widgetsMenu;
+      isMenuShowing = true;
     });
   }
 
-  onTapItemMenuNew() {
+  onTapMenuNew() {
     newGame();
     setState(() {
       isMenuShowing = false;
     });
   }
 
+  onTapMenuNewChess12() {
+    newGame(type: TypeGame.chess12);
+    setState(() {
+      isMenuShowing = false;
+    });
+  }
 
-  onTapItemMenuEnd() {
+  onTapMenuEnd() {
     endGame(isAbort: true);
     setState(() {
       isMenuShowing = false;
@@ -1109,7 +1125,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  onTapItemMenuResign() {
+  onTapMenuResign() {
     setState(() {
       isMenuShowing = false;
     });
@@ -1117,7 +1133,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  onTapItemMenuDraw() {
+  onTapMenuDraw() {
     setState(() {
       isMenuShowing = false;
     });
@@ -1125,7 +1141,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
   
-  onTapItemMenuAnimate() {
+  onTapMenuAnimate() {
     animateGame(millisecondsDelay: MILLISECONDS_DELAY_GAME_ANIMATION);
     setState(() {
       isMenuShowing = false;
@@ -1133,7 +1149,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  onTapItemMenuOrientation() {
+  onTapMenuOrientation() {
     isOrientationLight = !isOrientationLight;
     setOffsetsOfPosition();
     setState(() {
@@ -1142,15 +1158,15 @@ class StateWidgetGame extends State<WidgetGame> {
   }
   
 
-  onTapItemMenuTime() {
+  onTapMenuTime() {
+    var widgetsMenu = widgetsMenuTime();
     setState(() {
-      this.isMenuShowing = false;
-      this.areControlsShowing = true;
+      this.widgetsMenu = widgetsMenu;
     });
   }
 
 
-  onTapItemMenuHistory() {
+  onTapMenuHistory() {
     pushHistory();
     setState(() {
       isMenuShowing = false;
@@ -1158,7 +1174,7 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  onTapItemMenuBoard() async {
+  onTapMenuBoard() async {
     await pushBoard();
     setState(() {
       isMenuShowing = false;
@@ -1166,11 +1182,18 @@ class StateWidgetGame extends State<WidgetGame> {
   }
 
 
-  onTapItemTimeControl(ControlTimer controlTimer) {
+  onTapMenuTimeBack() {
+    var widgetsMenu = widgetsMenuEntry();
+    setState(() {
+      this.widgetsMenu = widgetsMenu;
+    });
+  }
+
+  onTapMenuTimeControl(ControlTimer controlTimer) {
     this.controlTimer = controlTimer;
     setState(() {
-      this.areControlsShowing = false;
       this.timer = TimerGame.control(this.controlTimer);
+      isMenuShowing = false;
     });
     if (isConnected) {
       var payloadControl = PayloadGame.setControl(timer.control);
@@ -1267,7 +1290,7 @@ class StateWidgetGame extends State<WidgetGame> {
     sendPayload(payloadIdDevice);
 
     if (isDiscoverer) {
-      // TODO: MERGE CALLS
+      // TODO: MERGE CALLS?
       await Future.delayed(Duration(seconds: 10));
       var payloadControl = PayloadGame.setControl(timer.control);
       sendPayload(payloadControl);
@@ -1387,21 +1410,23 @@ class StateWidgetGame extends State<WidgetGame> {
       defaults = defaults;
     });
     await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
-    newGame();
+    newGame(type: typeGame);
 //    History.clearGames();
   }
 
-  
-  newGame({PayloadGame payload}) async {
+
+  // TODO: HANDLE TYPE
+  newGame({PayloadGame payload, TypeGame type = TypeGame.standard}) async {
 
     var isLocal = payload == null;
+    typeGame = payload?.type ?? type;
 
     if (isConnected && isLocal) {
-      var payloadNew = PayloadGame.newGame();
+      var payloadNew = PayloadGame.newGame(typeGame);
       sendPayload(payloadNew);
     }
 
-    game = Game.standard();
+    game = Game.type(typeGame);
     timer = TimerGame.control(controlTimer);
 
     positions = [game.board];
@@ -1415,14 +1440,14 @@ class StateWidgetGame extends State<WidgetGame> {
       indexFirstNotationRight = 0;
       timer.timeTotal = timer.timeTotal;
       timer.timeTotal = timer.timeTotal;
-      titleAlert = null;
+//      titleAlert = null;
     });
   }
 
 
   createGameFromHistory(GameHistory gameHistory) {
 
-    game = Game.standard();
+    game = Game.type(gameHistory.type);
     timer = TimerGame(timeTotal: gameHistory.moves.first.time);
     positions = [];
 
@@ -1615,7 +1640,13 @@ class StateWidgetGame extends State<WidgetGame> {
         : connection.nameEndpoint
         : null;
 
-    var gameHistory = GameHistory(idDevice: isConnected ? connection.idDevice : null, nameLight: nameLight, nameDark: nameDark, moves: []);
+    var gameHistory = GameHistory(
+        idDevice: isConnected ? connection.idDevice : null,
+        nameLight: nameLight,
+        nameDark: nameDark,
+        moves: [],
+        type: typeGame
+    );
     game.notations.asMap().forEach((index, notation) {
       var moveGameHistory = MoveGameHistory(notation, timer.moves[index].time);
       gameHistory.moves.add(moveGameHistory);
@@ -1846,7 +1877,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   
   autoRotateIfNeeded() {
-    if (!isConnected && defaults.autoRotates) {
+    if (!isConnected && defaults.rotatesAutomatically) {
       isOrientationLight = !isOrientationLight;
     }
   }

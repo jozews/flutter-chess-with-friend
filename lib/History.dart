@@ -1,10 +1,12 @@
 
+
 import 'dart:io';
 import 'dart:convert';
 
 import 'package:path_provider/path_provider.dart';
 
 import 'TimerGame.dart';
+import 'Game.dart';
 
 enum ResultGameHistory {
   checkmate, stalemate, insufficientMaterial, timeOver, resignation, draw, abort, end, pause
@@ -23,17 +25,19 @@ class GameHistory {
   String idDevice;
   String nameLight;
   String nameDark;
+  TypeGame type;
   ResultGameHistory result;
   bool isLightWinner;
   List<MoveGameHistory> moves;
   double timestamp;
 
-  GameHistory({this.idDevice, this.nameLight, this.nameDark, this.isLightWinner, this.result, this.moves});
+  GameHistory({this.idDevice, this.nameLight, this.nameDark, this.isLightWinner, this.result, this.moves, this.type});
 
   GameHistory.fromMap(Map<String, dynamic> map) {
     idDevice = map["id_device"];
     nameLight = map["name_light"];
     nameDark = map["name_dark"];
+    type = TypeGame.values[map["type"] ?? 0];
     result = ResultGameHistory.values[map["result"]];
     isLightWinner = map["is_light_winner"];
     moves = map["moves"].map<MoveGameHistory>((move) => MoveGameHistory(move["notation"], move["time"])).toList();
@@ -45,6 +49,7 @@ class GameHistory {
       "id_device" : idDevice,
       "name_light" : nameLight,
       "name_dark" : nameDark,
+      "type" : TypeGame.values.indexOf(type),
       "result" : ResultGameHistory.values.indexOf(result),
       "is_light_winner" : isLightWinner,
       "timestamp" : TimerGame.timestampNow,
