@@ -8,33 +8,34 @@ Map<Square, Piece> getBoardStandard() {
 
   var board = Map<Square, Piece>();
 
+  var types = [TypePiece.rook, TypePiece.knight, TypePiece.bishop, TypePiece.queen, TypePiece.king];
+
   var columns = List<int>.generate(8, (i) => 1 + i);
+  var row = 1;
+
   for (int column in columns) {
-    var rows = List<int>.generate(2, (i) => 1 + i) + List<int>.generate(2, (i) => 7 + i);
-    for (int row in rows) {
-      var square = Square(column, row);
-      var isLight = row == 1 || row == 2 ? true : false;
-      if (row == 1 || row == 8) {
-        if (column == 1 || column == 8) {
-          board[square] = Piece(TypePiece.rook, isLight, square);
-        }
-        else if (column == 2 || column == 7) {
-          board[square] = Piece(TypePiece.knight, isLight, square);
-        }
-        else if (column == 3 || column == 6) {
-          board[square] = Piece(TypePiece.bishop, isLight, square);
-        }
-        else if (column == 4) {
-          board[square] = Piece(TypePiece.queen, isLight, square);
-        }
-        else {
-          board[square] = Piece(TypePiece.king, isLight, square);
-        }
-      }
-      else {
-        board[square] = Piece(TypePiece.pawn, isLight, square);
-      }
-    }
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, true, square);
+  }
+
+  row = 2;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, true, square);
+  }
+
+  row = 7;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, false, square);
+  }
+
+  row = 8;
+  for (int column in columns) {
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, false, square);
   }
 
   return board;
@@ -43,57 +44,94 @@ Map<Square, Piece> getBoardStandard() {
 
 Map<Square, Piece> getBoardChess12() {
 
-  // 0 = rook, bishop, knight
-  // 1 = rook, knight, bishop
-  // 2 = bishop, rook, knight
-  // 3 = bishop, knight, rook
-  // 4 = knight, rook, bishop
-  // 5 = knight, bishop, rook
-  var random = new Random();
-  var orderEdge = random.nextInt(6);
-  // 0 = king, queen
-  // 1 = queen, king
-  var orderCenter = random.nextInt(2);
+  var board = Map<Square, Piece>();
+
+  var types = List<TypePiece>();
+  var typesEdges = [TypePiece.rook, TypePiece.bishop, TypePiece.knight];
+  var typesCenter = [TypePiece.queen, TypePiece.king];
+
+  typesEdges.shuffle();
+  types.addAll(typesEdges);
+  typesCenter.shuffle();
+  types.addAll(typesCenter);
+
+  var columns = List<int>.generate(8, (i) => 1 + i);
+  var row = 1;
+
+  for (int column in columns) {
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, true, square);
+  }
+
+  row = 2;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, true, square);
+  }
+
+  row = 7;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, false, square);
+  }
+
+  row = 8;
+  for (int column in columns) {
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, false, square);
+  }
+
+  return board;
+}
+
+
+Map<Square, Piece> getBoardChess12Revolution() {
 
   var board = Map<Square, Piece>();
 
+  var types = List<TypePiece>();
+  var typesEdges = [TypePiece.rook, TypePiece.bishop, TypePiece.knight];
+  var typesCenter = [TypePiece.queen, TypePiece.king];
+
+  typesEdges.shuffle();
+  types.addAll(typesEdges);
+  typesCenter.shuffle();
+  types.addAll(typesCenter);
+
   var columns = List<int>.generate(8, (i) => 1 + i);
+  var row = 1;
+
   for (int column in columns) {
-    var rows = List<int>.generate(2, (i) => 1 + i) + List<int>.generate(2, (i) => 7 + i);
-    for (int row in rows) {
-      var square = Square(column, row);
-      var isLight = row == 1 || row == 2 ? true : false;
-      if (row == 1 || row == 8) {
-        // edge 1
-        if (column == 1 || column == 8) {
-          var typePiece = orderEdge < 2 ? TypePiece.rook : orderEdge < 4 ? TypePiece.bishop : TypePiece.knight;
-          board[square] = Piece(typePiece, isLight, square);
-        }
-        // edge 2
-        else if (column == 2 || column == 7) {
-          var typePiece = orderEdge == 2 || orderEdge == 4 ? TypePiece.rook : orderEdge % 5 == 0 ? TypePiece.bishop : TypePiece.knight;
-          board[square] = Piece(typePiece, isLight, square);
-        }
-        // edge 3
-        else if (column == 3 || column == 6) {
-          var typePiece = orderEdge == 3 || orderEdge == 5 ? TypePiece.rook : orderEdge % 3 == 1 ? TypePiece.bishop : TypePiece.knight;
-          board[square] = Piece(typePiece, isLight, square);
-        }
-        // center
-        else if (column == 4) {
-          var typePiece = orderCenter == 0 ? TypePiece.king : TypePiece.queen;
-          board[square] = Piece(typePiece, isLight, square);
-        }
-        // center
-        else {
-          var typePiece = orderCenter == 0 ? TypePiece.queen : TypePiece.king;
-          board[square] = Piece(typePiece, isLight, square);
-        }
-      }
-      else {
-        board[square] = Piece(TypePiece.pawn, isLight, square);
-      }
-    }
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, true, square);
+  }
+
+  row = 2;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, true, square);
+  }
+
+  types.clear();
+  typesEdges.shuffle();
+  types.addAll(typesEdges);
+  typesCenter.shuffle();
+  types.addAll(typesCenter);
+
+  row = 7;
+  for (int column in columns) {
+    var square = Square(column, row);
+    board[square] = Piece(TypePiece.pawn, false, square);
+  }
+
+  row = 8;
+  for (int column in columns) {
+    var square = Square(column, row);
+    var type = column - 1 < types.length ? types[column - 1] : types[columns.length - column];
+    board[square] = Piece(type, false, square);
   }
 
   return board;

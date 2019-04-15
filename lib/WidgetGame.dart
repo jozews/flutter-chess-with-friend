@@ -151,8 +151,9 @@ class StateWidgetGame extends State<WidgetGame> {
   bool get canPayloadGameDraw => isGameOngoing;
   bool get canSelectNotations => !isGameOngoing;
 
-  bool get showsMenuNewStandard => (typeState != TypeStateWidgetGame.ongoing && typeGame == TypeGame.chess12) || typeState == TypeStateWidgetGame.ended;
-  bool get showsMenuNewChess12 => (typeState != TypeStateWidgetGame.ongoing && typeGame == TypeGame.standard) || typeState == TypeStateWidgetGame.ended;
+  bool get showsMenuNewStandard => (typeState != TypeStateWidgetGame.ongoing && typeGame != TypeGame.standard) || typeState == TypeStateWidgetGame.ended;
+  bool get showsMenuNewChess12 => (typeState != TypeStateWidgetGame.ongoing && typeGame != TypeGame.chess12) || typeState == TypeStateWidgetGame.ended;
+  bool get showsMenuNewChess12Revolution => (typeState != TypeStateWidgetGame.ongoing && typeGame != TypeGame.chess12Revolution) || typeState == TypeStateWidgetGame.ended;
   bool get showsMenuEnd => !isConnected && typeState == TypeStateWidgetGame.ongoing;
   bool get showsMenuResign => isConnected && isGameOngoing;
   bool get showsMenuDraw => isConnected && isGameOngoing;
@@ -544,10 +545,10 @@ class StateWidgetGame extends State<WidgetGame> {
     return [
       showsMenuNewStandard ? GestureDetector(
         child: widgetItemMenu(
-            title: "new"
+            title: "new standard"
         ),
         onTap: () {
-          onTapMenuNew();
+          onTapMenuNew(TypeGame.standard);
         },
       ) : Container(),
       showsMenuNewChess12 ? GestureDetector(
@@ -555,7 +556,15 @@ class StateWidgetGame extends State<WidgetGame> {
             title: "new chess12"
         ),
         onTap: () {
-          onTapMenuNewChess12();
+          onTapMenuNew(TypeGame.chess12);
+        },
+      ) : Container(),
+      showsMenuNewChess12Revolution ? GestureDetector(
+        child: widgetItemMenu(
+            title: "new chess12 revolution"
+        ),
+        onTap: () {
+          onTapMenuNew(TypeGame.chess12Revolution);
         },
       ) : Container(),
       showsMenuEnd ? GestureDetector(
@@ -687,6 +696,7 @@ class StateWidgetGame extends State<WidgetGame> {
             alignment: Alignment.center,
             child: Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                   color: Colors.white,
                   fontSize: Const.SIZE_TITLE,
@@ -1102,15 +1112,8 @@ class StateWidgetGame extends State<WidgetGame> {
     });
   }
 
-  onTapMenuNew() {
-    newGame();
-    setState(() {
-      isMenuShowing = false;
-    });
-  }
-
-  onTapMenuNewChess12() {
-    newGame(type: TypeGame.chess12);
+  onTapMenuNew(TypeGame type) {
+    newGame(type: type);
     setState(() {
       isMenuShowing = false;
     });

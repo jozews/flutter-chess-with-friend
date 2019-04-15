@@ -1,4 +1,5 @@
 
+
 import 'dart:core';
 import 'package:quiver/core.dart';
 
@@ -8,7 +9,6 @@ import 'UtilsGame.dart';
 enum TypePiece {
   king, queen, bishop, knight, rook, pawn
 }
-
 
 
 class Piece {
@@ -97,7 +97,7 @@ class Move {
 
 
 enum TypeGame {
-  standard, chess12
+  standard, chess12, chess12Revolution
 }
 
 
@@ -126,6 +126,9 @@ class Game {
         break;
       case TypeGame.chess12:
         board = getBoardChess12();
+        break;
+      case TypeGame.chess12Revolution:
+        board = getBoardChess12Revolution();
         break;
     }
   }
