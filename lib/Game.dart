@@ -361,7 +361,8 @@ class Game {
           }
           var countSquaresToCastle = isShort ? 2 : 3;
           var squaresToCastle = getSquaresFromSquareWithDelta(move.square1, deltaCastle, addSquare1: true, limit: countSquaresToCastle, stopBeforePiece: true);
-          if (squaresToCastle.length != countSquaresToCastle) {
+          var pieceOnCastlePath = squaresToCastle.length != countSquaresToCastle;
+          if (pieceOnCastlePath) {
             return false;
           }
           for (Square square in squaresToCastle) {
