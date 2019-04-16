@@ -545,7 +545,7 @@ class StateWidgetGame extends State<WidgetGame> {
     return [
       showsMenuNewStandard ? GestureDetector(
         child: widgetItemMenu(
-            title: "new standard"
+            title: "new classic"
         ),
         onTap: () {
           onTapMenuNew(TypeGame.standard);

@@ -360,7 +360,7 @@ class Game {
             return false;
           }
           var countSquaresToCastle = isShort ? 2 : 3;
-          var squaresToCastle = getSquaresFromSquareWithDelta(move.square1, deltaCastle, limit: countSquaresToCastle, stopBeforePiece: true);
+          var squaresToCastle = getSquaresFromSquareWithDelta(move.square1, deltaCastle, addSquare1: true, limit: countSquaresToCastle, stopBeforePiece: true);
           if (squaresToCastle.length != countSquaresToCastle) {
             return false;
           }
