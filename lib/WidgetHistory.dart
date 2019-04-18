@@ -1,8 +1,10 @@
 
+
 import 'package:flutter/material.dart';
 
 import 'Const.dart';
 import 'History.dart';
+import 'UtilsTime.dart';
 
 
 typedef void CompletionWidgetHistory(GameHistory gameHistory);
@@ -87,7 +89,6 @@ class StateWidgetHistory extends State<WidgetHistory> {
 
 
   Widget widgetGame(GameHistory game) {
-    // TODO: SHOW WHEN
     var nameWinner = game.isLightWinner ?? true ? game.nameLight ?? Const.STRING_LIGHT : game.nameDark ?? Const.STRING_DARK;
     var nameLoser = !(game.isLightWinner ?? true) ? game.nameLight ?? Const.STRING_LIGHT : game.nameDark ?? Const.STRING_DARK;
     var suffixVerb = nameWinner != Const.STRING_YOU ? "s" : "";
@@ -122,19 +123,29 @@ class StateWidgetHistory extends State<WidgetHistory> {
         title = "game paused";
         break;
     }
+
+    var time = getFormattedTime(game.timestamp).toLowerCase();
+
     return GestureDetector(
       child: Container(
         child: Stack(
           children: <Widget>[
             Align(
               alignment: Alignment.center,
-              child: Text(
-                title,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: Const.SIZE_TITLE,
-                    fontWeight: FontWeight.w400
-                ),
+              child: Column(
+                children: <Widget>[
+                  Text(
+                    "$title $time",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: Const.SIZE_TITLE,
+                        fontWeight: FontWeight.w400
+                    ),
+                  ),
+                ],
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
               ),
             ),
             Align(

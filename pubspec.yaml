@@ -21,6 +21,7 @@ dependencies:
   simple_permissions: ^0.1.9
   path_provider: any
   utf: ^0.9.0+5
+  intl: any
 
 
 dev_dependencies:
