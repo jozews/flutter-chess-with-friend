@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:utf/utf.dart';
 
 import 'Game.dart';
+import 'Move.dart';
 import 'TimerGame.dart';
+import 'Square.dart';
 
 
 enum TypePayloadGame {

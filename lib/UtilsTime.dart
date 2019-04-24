@@ -13,7 +13,8 @@ int getDaysDifference(DateTime date1, DateTime date2) {
     var newMonth = date1.month + 1 == 13 ? 1 : date1.month + 1;
     return -(daysOfMonth - date1.day) +
         getDaysDifference(DateTime(newYear, newMonth, 1), date2);
-  } else {
+  }
+  else {
     var newYear = date1.month - 1 == 0 ? date1.year - 1 : date1.year;
     var newMonth = date1.month - 1 == 0 ? 12 : date1.month - 1;
     return (date1.day) +

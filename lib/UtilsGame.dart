@@ -1,7 +1,8 @@
 
 
-import 'dart:math';
-import 'Game.dart';
+import 'Square.dart';
+import 'Piece.dart';
+import 'Move.dart';
 
 
 Map<Square, Piece> getBoardStandard() {

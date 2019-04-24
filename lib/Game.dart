@@ -1,98 +1,16 @@
 
 
 import 'dart:core';
-import 'package:quiver/core.dart';
 
 import 'UtilsGame.dart';
-
-
-enum TypePiece {
-  king, queen, bishop, knight, rook, pawn
-}
-
-
-class Piece {
-
-  Square squareFirst;
-  TypePiece type;
-  bool isLight;
-
-  Piece(this.type, this.isLight, this.squareFirst);
-
-  @override
-  String toString() {
-    return "${isLight ? 'light' : 'dark'} $type";
-  }
-
-  bool operator ==(o) => o is Piece && o.squareFirst == squareFirst;
-  int get hashCode => squareFirst.hashCode;
-
-  String get notationType {
-    return type == TypePiece.king ? "K" 
-        : type == TypePiece.queen ? "Q" 
-        : type == TypePiece.bishop ? "B" 
-        : type == TypePiece.knight ? "N" 
-        : type == TypePiece.rook ? "R" 
-        : "";
-  }
-}
+import 'Piece.dart';
+import 'Square.dart';
+import 'Move.dart';
 
 
 
 enum StateGame {
   ongoing, checkmate, stalemate, insufficientMaterial
-}
-
-
-
-class Square {
-
-  int column;
-  int row;
-
-  Square(this.column, this.row);
-
-  Square.fromInt(int i) {
-    this.column = i ~/ 10;
-    this.row = i % 10;
-  }
-
-  bool get isLight => row % 2 != column % 2;
-
-  int toInt() {
-    return column*10 + row;
-  }
-
-
-  @override
-  String toString() {
-    return "($column, $row)";
-  }
-
-  bool get isInBounds => column >= 1 && column <= 8 && row >= 1 && row <= 8;
-  bool operator ==(o) => o is Square && o.column == column && o.row == row;
-  int get hashCode => hash2(column.hashCode, row.hashCode);
-  
-  String get notation => notationColumn + row.toString();
-  String get notationColumn => "_abcdefgh".split("")[column];
-}
-
-
-
-class Move {
-
-  Square square1;
-  Square square2;
-
-  Move(this.square1, this.square2);
-
-  @override
-  String toString() {
-    return "$square1 to $square2";
-  }
-
-  bool operator ==(o) => o is Move && o.square1 == square1 && o.square2 == square2;
-  int get hashCode => hash2(square1, square2);
 }
 
 
