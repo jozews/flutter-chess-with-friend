@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:device_info/device_info.dart';
 import 'package:simple_permissions/simple_permissions.dart';
+import 'package:nearby_connectivity/nearby_connectivity.dart';
 
 import 'Square.dart';
 import 'Move.dart';
@@ -13,7 +14,6 @@ import 'TimerGame.dart';
 import 'Defaults.dart';
 import 'Const.dart';
 import 'Utils.dart';
-import 'Nearby.dart';
 import 'Connection.dart';
 import 'PayloadGame.dart';
 import 'History.dart';
@@ -1223,7 +1223,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   startAdvertising() async {
-    Nearby.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
+    NearbyConnectivity.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
       switch (advertise.type) {
         case TypeLifecycle.initiated:
           acceptConnection(advertise);
@@ -1240,7 +1240,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   startDiscovering() {
-    Nearby.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
+    NearbyConnectivity.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
       switch (discovery.type) {
         case TypeDiscovery.found:
           if (isConnected) {
@@ -1256,7 +1256,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   requestConnection(Discovery discovery) {
-    Nearby.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
+    NearbyConnectivity.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
       switch (lifecycle.type) {
         case TypeLifecycle.initiated:
           acceptConnection(lifecycle, isDiscoverer: true);
@@ -1273,7 +1273,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
 
   acceptConnection(Lifecycle advertise, {bool isDiscoverer = false}) {
-    Nearby.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
+    NearbyConnectivity.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
       switch (payload.type) {
         case TypePayload.received:
           handlePayload(payload);
@@ -1332,7 +1332,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
   sendPayload(PayloadGame payload) {
     var bytesPayload = payload.toBytes();
-    Nearby.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
+    NearbyConnectivity.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
   }
 
 
@@ -1416,7 +1416,6 @@ class StateWidgetGame extends State<WidgetGame> {
     });
     await Future.delayed(Duration(milliseconds: MILLISECONDS_DELAY_NEW_GAME));
     newGame(type: typeGame);
-//    History.clearGames();
   }
 
 
@@ -1460,7 +1459,7 @@ class StateWidgetGame extends State<WidgetGame> {
       var position = Map<Square, Piece>.from(game.board);
       positions.add(position);
       var move = game.getMoveFromNotation(moveGameHistory.notation);
-      game.makeMove(move);
+      game.makeMove(move, shouldValidate: false);
     });
 
     // add last position

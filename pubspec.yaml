@@ -22,6 +22,7 @@ dependencies:
   path_provider: any
   utf: ^0.9.0+5
   intl: any
+  nearby_connectivity: any
 
 
 dev_dependencies:
