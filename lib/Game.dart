@@ -578,7 +578,7 @@ class Game {
           }
           var countSquaresToCastle = isShort ? 2 : 3;
           var squaresToCastle = getSquaresFromSquareWithVector(move.square1, vectorCastle, addSquare1: true, limit: countSquaresToCastle, stopBeforePiece: true);
-          var pieceOnCastlePath = squaresToCastle.length != countSquaresToCastle;
+          var pieceOnCastlePath = squaresToCastle.length - 1 != countSquaresToCastle;
           if (pieceOnCastlePath) {
             return false;
           }
@@ -885,7 +885,7 @@ class Game {
 
   Move getMoveFromNotation(String notation) {
 
-    if (notation == "") {
+    if (notation == "-") {
       print("");
     }
 
@@ -904,11 +904,11 @@ class Game {
 
       // get type piece
       // ...
-      var typePiece = notation.contains("K") ? TypePiece.king 
-      : notation.contains("Q") ? TypePiece.queen 
-      : notation.contains("B") ? TypePiece.bishop
-      : notation.contains("N") ? TypePiece.knight
-      : notation.contains("R") ? TypePiece.rook
+      var typePiece = notation.startsWith("K") ? TypePiece.king
+      : notation.startsWith("Q") ? TypePiece.queen
+      : notation.startsWith("B") ? TypePiece.bishop
+      : notation.startsWith("N") ? TypePiece.knight
+      : notation.startsWith("R") ? TypePiece.rook
       : TypePiece.pawn; 
 
       // get square final
@@ -927,11 +927,11 @@ class Game {
         throw Exception("Invalid PNG move");
       }
       if (entries.length > 1) {
-        int columnInitial = columns[0] != columnFinal ? columns[0] : null;
+        int columnInitial = columns.length > 1 ? columns[0] : null;
         if (columnInitial != null) {
           entries = entries.where((entryPiece) => entryPiece.key.column == columnInitial).toList();
         }
-        int rowInitial = rows[0] != rowFinal ? rows[0] : null;
+        int rowInitial = rows.length > 1 ? rows[0] : null;
         if (rowInitial != null) {
           entries = entries.where((entryPiece) => entryPiece.key.row == rowInitial).toList();
         }

@@ -11,6 +11,22 @@ import 'package:chess_with_friends/History.dart';
 void main() {
 
 
+  test('test stalemate', () {
+
+    var game = Game.type(TypeGame.standard);
+    var notations = "g3;d5;Bg2;Nf6;h3;c5;b3;Nc6;Bb2;e5;a3;Bd6;d3;Be6;Nd2;Qd7;e4;O-O-O;exd5;Nxd5;Ne4;Be7;Ne2;f5;N4c3;Nxc3;Bxc3;f4;Qd2;Nd4;gxf4;Bh4;O-O-O;Qc7;fxe5;Qxe5;f4;Qxe2;Qxe2;Nxe2+;Kb2;Nxc3;Kxc3;Bd5;Bxd5;Rxd5;Kc4;Bf6;Kxd5;Rd8+;Kc4;a6;a4;Rd4+;Kxc5;Kc7;c4;b6+;Kb4;Rxf4;Rhf1;Rd4;Rfe1;Kc6;Re4;a5+;Ka3;Rd7;Re6+;Kb7;Re4;Be7+;Ka2;Bb4;d4;Rf7;Re2;Rf3;d5;Kc7;d6+;Bxd6;Red2;Bc5;Rd7+;Kc6;Re1;Rxh3;Rxg7;Rh2+;Kb1;h5;Re6+;Bd6;Rgg6;Rd2;Kc1;Rd4;Kc2;Kc5;Rg5+;Kb4;Rxh5;Bf4;Re2;Ka3;Rb5;Rd6;Kb1;Rd1+;Kc2;Ra1;Rxb6;Bg5;Kd3;Ra2;Rxa2+;Kxa2;Rb5;Bd8;c5;Ka3;Kc4;Bc7;c6;Be5;Rb7;Bf4;c7;Be3;c8=Q;Bd2;Qc5+;Bb4;Rxb4;axb4;Qxb4+;Ka2;Qb5;Ka1;a5;Ka2;a6;Ka1;a7;Kb1;a8=Q;Kb2;Qe5+;Kc1;Qa2;Kd1;Qaa1+;Kc2;Qee1";
+
+    for (String notation in notations.split(";")) {
+      print("Making move $notation");
+      expect(game.state, StateGame.ongoing);
+      var move = game.getMoveFromNotation(notation);
+      var isValid = game.makeMove(move);
+      expect(isValid, true);
+    }
+
+    expect(game.state, StateGame.stalemate);
+  });
+
   test('test Alexander Beliavsky vs Larry Mark Christiansen', () {
     
     var game = Game.type(TypeGame.standard);
