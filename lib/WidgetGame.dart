@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:device_info/device_info.dart';
 import 'package:simple_permissions/simple_permissions.dart';
-import 'package:nearby_connectivity/nearby_connectivity.dart';
+//import 'package:nearby_connectivity/nearby_connectivity.dart';
 
 import 'Square.dart';
 import 'Move.dart';
@@ -1202,7 +1202,7 @@ class StateWidgetGame extends State<WidgetGame> {
     });
     if (isConnected) {
       var payloadControl = PayloadGame.setControl(timer.control);
-      sendPayload(payloadControl);
+//      sendPayload(payloadControl);
     }
   }
 
@@ -1212,195 +1212,195 @@ class StateWidgetGame extends State<WidgetGame> {
   // ...
   // ...
   // ...
-  setupConnection() async {
-    await Future.delayed(Duration(seconds: 5));
-    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
-    infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
-    startAdvertising();
-    await Future.delayed(Duration(seconds: 5));
-    startDiscovering();
-  }
-
-
-  startAdvertising() async {
-    NearbyConnectivity.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
-      switch (advertise.type) {
-        case TypeLifecycle.initiated:
-          acceptConnection(advertise);
-          connect(idEndpoint: advertise.idEndpoint, nameEndpoint: advertise.nameEndpoint, isDiscoverer: false);
-          break;
-        case TypeLifecycle.result:
-          break;
-        case TypeLifecycle.disconnected:
-          disconnect();
-          break;
-      }
-    });
-  }
-
-
-  startDiscovering() {
-    NearbyConnectivity.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
-      switch (discovery.type) {
-        case TypeDiscovery.found:
-          if (isConnected) {
-            return;
-          }
-          requestConnection(discovery);
-          break;
-        case TypeDiscovery.lost:
-          break;
-      }
-    });
-  }
-
-
-  requestConnection(Discovery discovery) {
-    NearbyConnectivity.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
-      switch (lifecycle.type) {
-        case TypeLifecycle.initiated:
-          acceptConnection(lifecycle, isDiscoverer: true);
-          connect(idEndpoint: lifecycle.idEndpoint, nameEndpoint: lifecycle.nameEndpoint, isDiscoverer: true);
-          break;
-        case TypeLifecycle.result:
-          break;
-        case TypeLifecycle.disconnected:
-          disconnect();
-          break;
-      }
-    });
-  }
-
-
-  acceptConnection(Lifecycle advertise, {bool isDiscoverer = false}) {
-    NearbyConnectivity.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
-      switch (payload.type) {
-        case TypePayload.received:
-          handlePayload(payload);
-          break;
-        case TypePayload.transferred:
-          break;
-      }
-    });
-  }
-
-
-  connect({String idEndpoint, String nameEndpoint, bool isDiscoverer}) async {
-
-    await Future.delayed(Duration(seconds: 5)); // wait for accept handshake to complete
-
-    this.connection = Connection(idEndpoint, nameEndpoint);
-
-    var payloadIdDevice = PayloadGame.setIdDevice(infoDeviceAndroid.androidId);
-    sendPayload(payloadIdDevice);
-
-    if (isDiscoverer) {
-      // TODO: MERGE CALLS?
-      await Future.delayed(Duration(seconds: 10));
-      var payloadControl = PayloadGame.setControl(timer.control);
-      sendPayload(payloadControl);
-    }
-
-    setState(() {
-      connection = connection;
-      connection.isLocalLight = isDiscoverer ? true : true; // both devices start as white
-    });
-
-    newGame();
-
-    showSnackBar(
-        widgetConnection()
-    );
-  }
-
-
-  disconnect() {
-
-    if (isGameOngoing) {
-      endGame(isAbort: true);
-    }
-
-    showSnackBar(
-        widgetConnectionLost(isAbort: isGameOngoing)
-    );
-
-    setState(() {
-      this.connection = null;
-    });
-  }
-
-
-  sendPayload(PayloadGame payload) {
-    var bytesPayload = payload.toBytes();
-    NearbyConnectivity.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
-  }
-
-
-  handlePayload(Payload payload) {
-    var payloadGame = PayloadGame.fromBytes(payload.bytes);
-    switch (payloadGame.type) {
-      case TypePayloadGame.setIdDevice:
-        connection.idDevice = payloadGame.idDevice;
-        getScore();
-        break;
-      case TypePayloadGame.setControl:
-        if (canPayloadGameSetControl) {
-          setState(() {
-            controlTimer = payloadGame.control;
-            timer = TimerGame.control(controlTimer);
-          });
-        }
-        break;
-      case TypePayloadGame.newGame:
-        if (canPayloadGameNewGame) {
-          newGame(payload: payloadGame);
-        }
-        break;
-      case TypePayloadGame.startMove:
-        timer.addTimestampStart(timestamp: payloadGame.timestampStart);
-        break;
-      case TypePayloadGame.endMove:
-        moveGame(payloadGame.move, payload: payloadGame);
-        break;
-      case TypePayloadGame.endTime:
-        endGame(isTimeLightOver: !connection.isLocalLight);
-        break;
-      case TypePayloadGame.resign:
-        if (canPayloadGameResign) {
-          resignGame(payload: payloadGame);
-        }
-        break;
-      case TypePayloadGame.draw:
-        if (canPayloadGameDraw) {
-          drawGame(payload: payloadGame);
-        }
-        break;
-    }
-  }
-
-
-  getScore() async {
-    var scoreLocal = await Defaults.getDouble(keyScoreLocal) ?? 0.0;
-    var scoreRemote = await Defaults.getDouble(keyScoreRemote) ?? 0.0;
-    setState(() {
-      connection.scoreLocal = scoreLocal;
-      connection.scoreRemote = scoreRemote;
-    });
-  }
-
-
-  setScore({double scoreLocal, double scoreRemote}) async {
-    if (scoreLocal != null) {
-      await Defaults.setDouble(keyScoreLocal, scoreLocal);
-    }
-    if (scoreRemote != null) {
-      await Defaults.setDouble(keyScoreRemote, scoreRemote);
-    }
-    setState(() {
-      connection.scoreLocal = scoreLocal;
-      connection.scoreRemote = scoreRemote;
-    });
-  }
+//  setupConnection() async {
+//    await Future.delayed(Duration(seconds: 5));
+//    await SimplePermissions.requestPermission(Permission.AccessCoarseLocation);
+//    infoDeviceAndroid = await DeviceInfoPlugin().androidInfo;
+//    startAdvertising();
+//    await Future.delayed(Duration(seconds: 5));
+//    startDiscovering();
+//  }
+//
+//
+//  startAdvertising() async {
+//    NearbyConnectivity.startAdvertising(name: infoDeviceAndroid.model, idService: Const.ID_SERVICE).listen((advertise) {
+//      switch (advertise.type) {
+//        case TypeLifecycle.initiated:
+//          acceptConnection(advertise);
+//          connect(idEndpoint: advertise.idEndpoint, nameEndpoint: advertise.nameEndpoint, isDiscoverer: false);
+//          break;
+//        case TypeLifecycle.result:
+//          break;
+//        case TypeLifecycle.disconnected:
+//          disconnect();
+//          break;
+//      }
+//    });
+//  }
+//
+//
+//  startDiscovering() {
+//    NearbyConnectivity.startDiscovering(idService: Const.ID_SERVICE).listen((discovery) {
+//      switch (discovery.type) {
+//        case TypeDiscovery.found:
+//          if (isConnected) {
+//            return;
+//          }
+//          requestConnection(discovery);
+//          break;
+//        case TypeDiscovery.lost:
+//          break;
+//      }
+//    });
+//  }
+//
+//
+//  requestConnection(Discovery discovery) {
+//    NearbyConnectivity.requestConnection(idEndpoint: discovery.idEndpoint).listen((lifecycle) {
+//      switch (lifecycle.type) {
+//        case TypeLifecycle.initiated:
+//          acceptConnection(lifecycle, isDiscoverer: true);
+//          connect(idEndpoint: lifecycle.idEndpoint, nameEndpoint: lifecycle.nameEndpoint, isDiscoverer: true);
+//          break;
+//        case TypeLifecycle.result:
+//          break;
+//        case TypeLifecycle.disconnected:
+//          disconnect();
+//          break;
+//      }
+//    });
+//  }
+//
+//
+//  acceptConnection(Lifecycle advertise, {bool isDiscoverer = false}) {
+//    NearbyConnectivity.acceptConnection(idEndpoint: advertise.idEndpoint).listen((payload) {
+//      switch (payload.type) {
+//        case TypePayload.received:
+//          handlePayload(payload);
+//          break;
+//        case TypePayload.transferred:
+//          break;
+//      }
+//    });
+//  }
+//
+//
+//  connect({String idEndpoint, String nameEndpoint, bool isDiscoverer}) async {
+//
+//    await Future.delayed(Duration(seconds: 5)); // wait for accept handshake to complete
+//
+//    this.connection = Connection(idEndpoint, nameEndpoint);
+//
+//    var payloadIdDevice = PayloadGame.setIdDevice(infoDeviceAndroid.androidId);
+//    sendPayload(payloadIdDevice);
+//
+//    if (isDiscoverer) {
+//      // TODO: MERGE CALLS?
+//      await Future.delayed(Duration(seconds: 10));
+//      var payloadControl = PayloadGame.setControl(timer.control);
+//      sendPayload(payloadControl);
+//    }
+//
+//    setState(() {
+//      connection = connection;
+//      connection.isLocalLight = isDiscoverer ? true : true; // both devices start as white
+//    });
+//
+//    newGame();
+//
+//    showSnackBar(
+//        widgetConnection()
+//    );
+//  }
+//
+//
+//  disconnect() {
+//
+//    if (isGameOngoing) {
+//      endGame(isAbort: true);
+//    }
+//
+//    showSnackBar(
+//        widgetConnectionLost(isAbort: isGameOngoing)
+//    );
+//
+//    setState(() {
+//      this.connection = null;
+//    });
+//  }
+//
+//
+//  sendPayload(PayloadGame payload) {
+//    var bytesPayload = payload.toBytes();
+//    NearbyConnectivity.sendPayloadBytes(idEndpoint: connection.idEndpoint, bytes: bytesPayload);
+//  }
+//
+//
+//  handlePayload(Payload payload) {
+//    var payloadGame = PayloadGame.fromBytes(payload.bytes);
+//    switch (payloadGame.type) {
+//      case TypePayloadGame.setIdDevice:
+//        connection.idDevice = payloadGame.idDevice;
+//        getScore();
+//        break;
+//      case TypePayloadGame.setControl:
+//        if (canPayloadGameSetControl) {
+//          setState(() {
+//            controlTimer = payloadGame.control;
+//            timer = TimerGame.control(controlTimer);
+//          });
+//        }
+//        break;
+//      case TypePayloadGame.newGame:
+//        if (canPayloadGameNewGame) {
+//          newGame(payload: payloadGame);
+//        }
+//        break;
+//      case TypePayloadGame.startMove:
+//        timer.addTimestampStart(timestamp: payloadGame.timestampStart);
+//        break;
+//      case TypePayloadGame.endMove:
+//        moveGame(payloadGame.move, payload: payloadGame);
+//        break;
+//      case TypePayloadGame.endTime:
+//        endGame(isTimeLightOver: !connection.isLocalLight);
+//        break;
+//      case TypePayloadGame.resign:
+//        if (canPayloadGameResign) {
+//          resignGame(payload: payloadGame);
+//        }
+//        break;
+//      case TypePayloadGame.draw:
+//        if (canPayloadGameDraw) {
+//          drawGame(payload: payloadGame);
+//        }
+//        break;
+//    }
+//  }
+//
+//
+//  getScore() async {
+//    var scoreLocal = await Defaults.getDouble(keyScoreLocal) ?? 0.0;
+//    var scoreRemote = await Defaults.getDouble(keyScoreRemote) ?? 0.0;
+//    setState(() {
+//      connection.scoreLocal = scoreLocal;
+//      connection.scoreRemote = scoreRemote;
+//    });
+//  }
+//
+//
+//  setScore({double scoreLocal, double scoreRemote}) async {
+//    if (scoreLocal != null) {
+//      await Defaults.setDouble(keyScoreLocal, scoreLocal);
+//    }
+//    if (scoreRemote != null) {
+//      await Defaults.setDouble(keyScoreRemote, scoreRemote);
+//    }
+//    setState(() {
+//      connection.scoreLocal = scoreLocal;
+//      connection.scoreRemote = scoreRemote;
+//    });
+//  }
 
 
 
@@ -1427,7 +1427,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
     if (isConnected && isLocal) {
       var payloadNew = PayloadGame.newGame(typeGame);
-      sendPayload(payloadNew);
+//      sendPayload(payloadNew);
     }
 
     game = Game.type(typeGame);
@@ -1511,7 +1511,7 @@ class StateWidgetGame extends State<WidgetGame> {
     if (isTimeLightOver != null) {
       if (isConnected && connection.isLocalLight == isTimeLightOver) {
         var payloadEnd = PayloadGame.endTime();
-        sendPayload(payloadEnd);
+//        sendPayload(payloadEnd);
       }
       if (!isConnected || connection.isLocalLight == isTimeLightOver) {
         endGame(isTimeLightOver: isTimeLightOver);
@@ -1545,7 +1545,7 @@ class StateWidgetGame extends State<WidgetGame> {
 
       if (isConnected && isLocal) {
         var payloadEnd = PayloadGame.endMove(move, timestampNow);
-        sendPayload(payloadEnd);
+//        sendPayload(payloadEnd);
       }
 
       // start move
@@ -1553,7 +1553,7 @@ class StateWidgetGame extends State<WidgetGame> {
         timer.addTimestampStart(timestamp: timestampNow);
         if (isConnected) {
           var payloadStart = PayloadGame.startMove(timestampNow);
-          sendPayload(payloadStart);
+//          sendPayload(payloadStart);
         }
       }
 
@@ -1595,7 +1595,7 @@ class StateWidgetGame extends State<WidgetGame> {
     var isLocal = payload == null;
     if (isLocal) {
       var payloadResign = PayloadGame.resign();
-      sendPayload(payloadResign);
+//      sendPayload(payloadResign);
     }
     endGame(isResignLocal: isLocal);
   }
@@ -1617,7 +1617,7 @@ class StateWidgetGame extends State<WidgetGame> {
     }
     else if (isLocal) {
       var payloadDraw = PayloadGame.draw();
-      sendPayload(payloadDraw);
+//      sendPayload(payloadDraw);
       showSnackBar(
           widgetDrawSent()
       );
@@ -1724,7 +1724,7 @@ class StateWidgetGame extends State<WidgetGame> {
       else {
         gameHistory.result = ResultGameHistory.abort;
       }
-      setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
+//      setScore(scoreLocal: scoreLocalUpdated, scoreRemote: scoreRemoteUpdated);
     }
     else {
       if (game.state == StateGame.checkmate) {
